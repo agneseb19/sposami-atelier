@@ -47,10 +47,6 @@ const brandByName = (n) => BRANDS.find((b) => b.n === n);
    SCROLL MORBIDO
    ========================================================= */
 let lenis = null;
-// telefono: lo scroll lo gestisce GSAP, così le hero si fermano senza position:fixed
-// allowNestedScroll: le file di card (galleria abito, Collezione 2027, carosello) restano scorrevoli col dito
-if (MOBILE && !reduce) ScrollTrigger.normalizeScroll({ allowNestedScroll: true });
-const PIN_TYPE = MOBILE ? 'transform' : undefined;
 if (!reduce && window.Lenis && !MOBILE) {
   lenis = new window.Lenis({ lerp: 0.1 });
   lenis.on('scroll', ScrollTrigger.update);
@@ -144,7 +140,7 @@ function initEntrances(scope = document) {
 }
 
 function initParallax(scope = document) {
-  if (reduce) return;
+  if (reduce || MOBILE) return;
   $$('[data-par]', scope).forEach((im) => {
     gsap.fromTo(im, { yPercent: -6 }, {
       yPercent: 6, ease: 'none',
@@ -406,7 +402,8 @@ function initFrameHero() {
   const state = { f: 0 };
   const tl = gsap.timeline({
     defaults: { ease: 'none' },
-    scrollTrigger: { trigger: section, start: 'top top', end: MOBILE ? '+=200%' : '+=260%', pin: true, pinType: PIN_TYPE, scrub: 1, anticipatePin: 1 },
+    // telefono: nessun pin (scroll nativo e fluido), i fotogrammi scorrono mentre la hero esce
+    scrollTrigger: MOBILE ? { trigger: section, start: 'top top', end: 'bottom top', scrub: 0.5 } : { trigger: section, start: 'top top', end: '+=260%', pin: true, scrub: 1, anticipatePin: 1 },
   });
   tl.to(state, { f: N - 1, duration: 1, onUpdate: () => { const i = Math.round(state.f); if (i !== current) { current = i; draw(i); } } }, 0)
     .to('.vhero__hint', { opacity: 0, duration: 0.06 }, 0)
@@ -689,7 +686,12 @@ function initTryOn() {
   const pick = $('#pick');
   const chips = $('#pick-brands');
   chips.innerHTML = ['Tutti', ...brands].map((b, n) => `<button type="button" class="chip" aria-pressed="${n === 0}" data-b="${esc(b)}">${esc(b)}</button>`).join('');
-  const choose = (it) => { $('#chosen').textContent = `${it.n}, ${it.b}`; };
+  const choose = (it) => {
+    $('#chosen').textContent = `${it.n}, ${it.b}`;
+    const im = $('#chosen-img');
+    im.src = img(it.img[0], 240, 300); im.alt = `${it.n}, ${it.b}`; im.hidden = false;
+    $('#chosen-card').classList.add('is-on');
+  };
   function draw(brand) {
     let l = brand === 'Tutti' ? list.slice(0, 60) : list.filter((i) => i.b === brand);
     const p = CATALOG.find((i) => i.id === pre);
@@ -710,9 +712,9 @@ function initTryOn() {
   const p = CATALOG.find((i) => i.id === pre);
   if (p) {
     choose(p);
-    // arrivando dalla scheda di un abito si va dritti allo strumento, con l'abito già scelto
-    const tool = pick.closest('section') || pick;
-    setTimeout(() => (lenis ? lenis.scrollTo(tool, { offset: -90 }) : tool.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' })), 700);
+    // arrivando dalla scheda di un abito si va dritti all'abito scelto, ben visibile
+    const tool = $('#chosen-card');
+    setTimeout(() => { const y = tool.getBoundingClientRect().top + scrollY - 110; lenis ? lenis.scrollTo(y) : window.scrollTo({ top: y, behavior: reduce ? 'auto' : 'smooth' }); }, 700);
   }
 }
 
@@ -830,8 +832,7 @@ function initCinema(el) {
     .from($('.cn__media', el), { opacity: 0, scale: 1.06, duration: 2.4, ease: 'power2.out' }, 0)
     .from(chars, { opacity: 0, duration: 1.2, ease: 'power1.out', stagger: 0.07 }, 0.6)
     .from($$('.cn__copy > :not(.cn__title), .cn__hint', el), { opacity: 0, y: 10, duration: 1.2, ease: 'expo.out', stagger: 0.12 }, 1.1);
-  if (MOBILE) ScrollTrigger.create({ trigger: el, pin: $('.cn__pin', el), pinType: PIN_TYPE, pinSpacing: false, start: 'top top', end: 'bottom bottom' });
-  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: 'bottom bottom', scrub: 0.8 } })
+  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: MOBILE ? 'bottom top' : 'bottom bottom', scrub: 0.8 } })
     .fromTo(im, { objectPosition: from, scale: 1 }, { objectPosition: to, scale: 1.07, duration: 1 }, 0)
     .to($('.cn__hint', el), { opacity: 0, duration: 0.08 }, 0)
     .to($('.cn__copy', el), { opacity: 0, y: -16, duration: 0.3 }, 0.05)
@@ -856,8 +857,7 @@ function initZoom(el) {
   gsap.from(im, { opacity: 0, duration: 2, ease: 'power2.out' });
   gsap.from($$('.bz__open, .cn__hint', el), { opacity: 0, y: 10, duration: 1.4, ease: 'expo.out', stagger: 0.2, delay: 0.6 });
   gsap.set($('.bz__copy', el), { opacity: 0, y: 16 });
-  if (MOBILE) ScrollTrigger.create({ trigger: el, pin: $('.bz__pin', el), pinType: PIN_TYPE, pinSpacing: false, start: 'top top', end: 'bottom bottom' });
-  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: 'bottom bottom', scrub: 0.8 } })
+  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: MOBILE ? 'bottom top' : 'bottom bottom', scrub: 0.8 } })
     .fromTo(im, { scale: S }, { scale: 1, duration: 0.8, ease: 'power2.inOut' }, 0)
     .to($$('.bz__open, .cn__hint', el), { opacity: 0, duration: 0.12 }, 0.04)
     .to($('.bz__shade', el), { opacity: 1, duration: 0.25 }, 0.6)
@@ -866,7 +866,7 @@ function initZoom(el) {
 
 /* La barra resta trasparente, con logo e testi bianchi, finché si è sopra la foto della hero */
 function initBarOver() {
-  const hero = $$('.vhero, .cn, .bz, .bh').find((el) => !el.closest('[hidden]'));
+  const hero = $$('.vhero, .cn, .bz, .bh, .h3d--dark').find((el) => !el.closest('[hidden]'));
   const bar = $('.bar');
   if (!hero || !bar) return;
   document.body.classList.add('has-over');
@@ -888,7 +888,7 @@ function typeOrPic(b, w, h, alt) {
 
 let colorTriggers = [];
 function animateIn(els) {
-  if (reduce || !els.length) return;
+  if (reduce || MOBILE || !els.length) return;
   colorTriggers = colorTriggers.filter((st) => {
     if (st.trigger && st.trigger.isConnected) return true;
     st.animation?.kill(); st.kill();
@@ -983,6 +983,17 @@ function initCollection() {
   });
 }
 
+/* File di card scorrevoli: se il dito ha trascinato, il tocco non apre il link */
+function initSwipeGuard() {
+  $$('.band, .bmore__row, .alt-steps__list, .gal, .gl__track').forEach((row) => {
+    let x0 = 0, y0 = 0, s0 = 0;
+    row.addEventListener('pointerdown', (e) => { x0 = e.clientX; y0 = e.clientY; s0 = row.scrollLeft; }, { passive: true });
+    row.addEventListener('click', (e) => {
+      if (Math.abs(e.clientX - x0) > 8 || Math.abs(e.clientY - y0) > 8 || Math.abs(row.scrollLeft - s0) > 4) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+  });
+}
+
 /* Prima e dopo da trascinare */
 function initBeforeAfter() {
   $$('.ba').forEach((ba) => {
@@ -1065,6 +1076,7 @@ initCollection();
 initBeforeAfter();
 initCoverflow();
 initForms();
+initSwipeGuard();
 initTabs();
 initEntrances();
 initParallax();

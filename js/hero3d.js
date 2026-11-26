@@ -642,7 +642,7 @@ export function mount(section, opts = {}) {
   const make = SCENES[section.dataset.scene];
   if (!canvas || !make) return;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 761 ? 1.25 : 1.75));
   renderer.toneMapping = THREE.NeutralToneMapping;
   const bgHex = getComputedStyle(section).getPropertyValue('--h3d-bg').trim() || '#F4F3F1';
   const bg = new THREE.Color(bgHex);
@@ -681,8 +681,10 @@ export function mount(section, opts = {}) {
     const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.updateProjectionMatrix();
     ctx.mobile = window.innerWidth < 761;
+    // telefono: il testo sta in basso sopra la scena, quindi la scena sale un po'
+    if (ctx.mobile) camera.setViewOffset(w, h, 0, h * 0.16, w, h); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
     ctx.halfW = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 10 * camera.aspect;
     sc.layout?.(ctx);
     if (reduce) draw(performance.now());

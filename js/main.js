@@ -47,7 +47,10 @@ const brandByName = (n) => BRANDS.find((b) => b.n === n);
    SCROLL MORBIDO
    ========================================================= */
 let lenis = null;
-if (!reduce && window.Lenis) {
+// telefono: lo scroll lo gestisce GSAP, così le hero si fermano senza position:fixed
+if (MOBILE && !reduce) ScrollTrigger.normalizeScroll(true);
+const PIN_TYPE = MOBILE ? 'transform' : undefined;
+if (!reduce && window.Lenis && !MOBILE) {
   lenis = new window.Lenis({ lerp: 0.1 });
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add((t) => lenis.raf(t * 1000));
@@ -388,7 +391,6 @@ function initFrameHero() {
   load(0).then(() => {
     ready = true;
     section.classList.add('vhero--live');
-    if (MOBILE) { tl.duration(6.5); gsap.delayedCall(0.9, () => tl.play()); }
     size();
     let k = 0;
     const next = () => {
@@ -403,7 +405,7 @@ function initFrameHero() {
   const state = { f: 0 };
   const tl = gsap.timeline({
     defaults: { ease: 'none' },
-    ...(MOBILE ? { paused: true } : { scrollTrigger: { trigger: section, start: 'top top', end: '+=260%', pin: true, scrub: 1, anticipatePin: 1 } }),
+    scrollTrigger: { trigger: section, start: 'top top', end: MOBILE ? '+=200%' : '+=260%', pin: true, pinType: PIN_TYPE, scrub: 1, anticipatePin: 1 },
   });
   tl.to(state, { f: N - 1, duration: 1, onUpdate: () => { const i = Math.round(state.f); if (i !== current) { current = i; draw(i); } } }, 0)
     .to('.vhero__hint', { opacity: 0, duration: 0.06 }, 0)
@@ -769,7 +771,8 @@ function initCinema(el) {
     .from($('.cn__media', el), { opacity: 0, scale: 1.06, duration: 2.4, ease: 'power2.out' }, 0)
     .from(chars, { opacity: 0, duration: 1.2, ease: 'power1.out', stagger: 0.07 }, 0.6)
     .from($$('.cn__copy > :not(.cn__title), .cn__hint', el), { opacity: 0, y: 10, duration: 1.2, ease: 'expo.out', stagger: 0.12 }, 1.1);
-  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: MOBILE ? 'bottom top' : 'bottom bottom', scrub: 0.8 } })
+  if (MOBILE) ScrollTrigger.create({ trigger: el, pin: $('.cn__pin', el), pinType: PIN_TYPE, pinSpacing: false, start: 'top top', end: 'bottom bottom' });
+  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: 'bottom bottom', scrub: 0.8 } })
     .fromTo(im, { objectPosition: from, scale: 1 }, { objectPosition: to, scale: 1.07, duration: 1 }, 0)
     .to($('.cn__hint', el), { opacity: 0, duration: 0.08 }, 0)
     .to($('.cn__copy', el), { opacity: 0, y: -16, duration: 0.3 }, 0.05)
@@ -794,17 +797,7 @@ function initZoom(el) {
   gsap.from(im, { opacity: 0, duration: 2, ease: 'power2.out' });
   gsap.from($$('.bz__open, .cn__hint', el), { opacity: 0, y: 10, duration: 1.4, ease: 'expo.out', stagger: 0.2, delay: 0.6 });
   gsap.set($('.bz__copy', el), { opacity: 0, y: 16 });
-  if (MOBILE) {
-    // su telefono la camera si allontana da sola, appena la foto è pronta
-    gsap.set(im, { scale: S });
-    const play = () => gsap.timeline({ delay: 0.5 })
-      .to(im, { scale: 1, duration: 3.4, ease: 'power2.inOut' }, 0)
-      .to($$('.bz__open, .cn__hint', el), { opacity: 0, duration: 0.6 }, 0.9)
-      .to($('.bz__shade', el), { opacity: 1, duration: 1 }, 2.4)
-      .to($('.bz__copy', el), { opacity: 1, y: 0, duration: 1, ease: 'expo.out' }, 2.8);
-    im.complete ? play() : im.addEventListener('load', play, { once: true });
-    return;
-  }
+  if (MOBILE) ScrollTrigger.create({ trigger: el, pin: $('.bz__pin', el), pinType: PIN_TYPE, pinSpacing: false, start: 'top top', end: 'bottom bottom' });
   gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: 'bottom bottom', scrub: 0.8 } })
     .fromTo(im, { scale: S }, { scale: 1, duration: 0.8, ease: 'power2.inOut' }, 0)
     .to($$('.bz__open, .cn__hint', el), { opacity: 0, duration: 0.12 }, 0.04)

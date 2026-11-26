@@ -309,29 +309,41 @@ function tape(ctx) {
     for (let i = 0; i < N; i++) { const d = Math.hypot(pos[i * 3] - p.x, pos[i * 3 + 2] - p.z); if (d < bd) { bd = d; best = i; } }
     return best;
   };
+  let downAt = null, userGrab = false;
   canvas.addEventListener('pointermove', (e) => {
-    if (e.pointerType !== 'mouse') return;
+    if (e.pointerType !== 'mouse' && grabbed < 0) return;
     const p = hit(e);
     if (!p) return;
-    hover.copy(p); hasHover.on = true;
+    hover.copy(p); hasHover.on = e.pointerType === 'mouse';
     if (grabbed >= 0) grabAt.set(p.x, 0.9, p.z);
     canvas.style.cursor = grabbed >= 0 ? 'grabbing' : nearest(p) >= 0 ? 'grab' : '';
   });
   canvas.addEventListener('pointerleave', () => { hasHover.on = false; });
   canvas.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    if (e.button !== 0) return;
     const p = hit(e);
     if (!p) return;
+    downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+    auto.on = false; auto.t = 0;
     grabbed = nearest(p);
-    if (grabbed >= 0) { grabAt.set(p.x, 0.9, p.z); canvas.setPointerCapture(e.pointerId); }
+    if (grabbed >= 0) { userGrab = true; grabAt.set(p.x, 0.9, p.z); canvas.setPointerCapture(e.pointerId); }
   });
-  const release = () => { grabbed = -1; canvas.style.cursor = ''; };
-  canvas.addEventListener('pointerup', release);
+  const release = () => { if (userGrab) { grabbed = -1; userGrab = false; } canvas.style.cursor = ''; };
+  canvas.addEventListener('pointerup', (e) => {
+    // un tocco breve su un punto vuoto fa ricadere il nastro
+    const tap = downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 8 && performance.now() - downAt.t < 300;
+    if (tap && grabbed < 0 && e.pointerType !== 'mouse') drop();
+    downAt = null;
+    release();
+  });
   canvas.addEventListener('pointercancel', release);
   canvas.addEventListener('dblclick', () => { drop(); });
 
   const target = new THREE.Vector3();
   let dropped = false;
+  const scrollLift = { on: false, from: new THREE.Vector3() };
+  // su telefono, senza mouse: ogni tanto una mano invisibile solleva un capo e lo posa altrove
+  const auto = { t: 0, on: false, k: 0, from: new THREE.Vector3(), to: new THREE.Vector3() };
   return {
     layout(c) {
       cx = c.mobile ? 0 : 1.9;
@@ -346,6 +358,26 @@ function tape(ctx) {
     },
     update(t, dt, p, c) {
       if (dt > 0) {
+        if (c.mobile && !scrollLift.on && !userGrab) {
+          auto.t += dt;
+          if (!auto.on && auto.t > 3.2) {
+            const e = Math.random() < 0.5 ? 0 : N - 1;
+            auto.on = true; auto.k = 0; grabbed = e;
+            auto.from.set(pos[e * 3], 0, pos[e * 3 + 2]);
+            auto.to.set((Math.random() - 0.5) * 2.6, 0, (Math.random() - 0.5) * 1.8);
+          }
+          if (auto.on) {
+            auto.k = Math.min(auto.k + dt / 2.8, 1);
+            const e = ease(auto.k);
+            grabAt.set(THREE.MathUtils.lerp(auto.from.x, auto.to.x, e), 0.06 + Math.sin(auto.k * Math.PI) * 0.95, THREE.MathUtils.lerp(auto.from.z, auto.to.z, e));
+            if (auto.k >= 1) { auto.on = false; auto.t = 0; grabbed = -1; }
+          }
+        }
+        if (!scrollLift.on && p > 0.02 && (grabbed < 0 || auto.on) && !userGrab) { auto.on = false; scrollLift.on = true; grabbed = N - 1; scrollLift.from.set(pos[(N - 1) * 3], 0, pos[(N - 1) * 3 + 2]); }
+        if (scrollLift.on) {
+          if (p <= 0.02) { scrollLift.on = false; grabbed = -1; }
+          else grabAt.set(scrollLift.from.x - p * 2.4, 0.25 + p * 2.4, scrollLift.from.z + p * 1.2);
+        }
         acc = Math.min(acc + dt, STEP * 4);
         while (acc >= STEP) { step(); acc -= STEP; }
         build();

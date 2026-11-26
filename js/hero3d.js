@@ -56,117 +56,304 @@ function studio(renderer) {
   return tex;
 }
 
-/* ------------------------------------- Sposo e Alterego: nastro di raso, metro da sarta */
-const BAND_VS = `
-uniform float uTime; uniform float uPull; uniform float uIntro; uniform float uPath; uniform float uW; uniform float uLen;
-varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-vec3 C(float s) {
-  float t = uTime;
-  if (uPath < 0.5) {
-    float x = (s - 0.5) * uLen + (1.0 - uIntro) * uLen * 0.9 - uPull * 6.0;
-    return vec3(x, sin(s * 4.2 + t * 0.45) * 1.0 + cos(s * 1.7 - t * 0.3) * 0.45, cos(s * 3.1 + t * 0.35) * 1.5);
-  }
-  float th = s * 26.0 + t * 0.35;
-  float R = 1.25 + 0.12 * sin(s * 7.0 + t * 0.8);
-  float y = (s - 0.5) * (2.6 + uPull * 10.0);
-  return vec3(cos(th) * R, y, sin(th) * R);
-}
-float S(float x) { return uPath < 0.5 ? x : x * max(uIntro, 0.002); }
-vec3 P(vec2 q) {
-  float s = S(q.x);
-  vec3 c = C(s);
-  vec3 T = normalize(C(s + 0.001) - c);
-  vec3 B = normalize(cross(T, vec3(0.0, 1.0, 0.0)));
-  vec3 N = normalize(cross(B, T));
-  float a = uPath < 0.5 ? s * 5.0 + sin(uTime * 0.4 + s * 3.0) * 1.2 : sin(s * 30.0 + uTime) * 0.12;
-  return c + (cos(a) * N + sin(a) * B) * (q.y - 0.5) * uW;
-}
-void main() {
-  vec3 p = P(uv);
-  vec3 a = P(uv + vec2(0.0015, 0.0)) - p;
-  vec3 b = P(uv + vec2(0.0, 0.02)) - p;
-  vN = normalize(normalMatrix * normalize(cross(a, b)));
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  vV = -mv.xyz;
-  vUv = vec2(S(uv.x), uv.y);
-  gl_Position = projectionMatrix * mv;
-}`;
-const BAND_FS = `
-uniform float uPath; uniform sampler2D uTex; uniform float uRepeat;
-varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-void main() {
-  if (uPath < 0.5 && min(vUv.x, 1.0 - vUv.x) < 0.035 * (1.0 - abs(vUv.y - 0.5) * 2.0)) discard;
-  vec3 n = normalize(vN);
-  vec3 v = normalize(vV);
-  if (dot(n, v) < 0.0) n = -n;
-  vec3 L1 = normalize(vec3(0.5, 0.8, 0.6));
-  vec3 L2 = normalize(vec3(-0.7, 0.1, 0.6));
-  vec3 h1 = normalize(L1 + v);
-  vec3 h2 = normalize(L2 + v);
-  vec3 col;
-  if (uPath < 0.5) {
-    float edge = step(vUv.y, 0.06) + step(0.94, vUv.y);
-    vec3 base = mix(vec3(0.02), vec3(0.62, 0.0, 0.05), edge);
-    float dif = max(dot(n, L1), 0.0) * 0.6 + 0.25;
-    float sp = pow(max(dot(n, h1), 0.0), 70.0) * 1.4 + pow(max(dot(n, h2), 0.0), 16.0) * 0.28;
-    float rim = pow(1.0 - abs(dot(n, v)), 3.0) * 0.18;
-    col = base * dif * 2.2 + vec3(sp + rim) * mix(vec3(0.85, 0.88, 0.95), vec3(1.0, 0.6, 0.6), edge);
-  } else {
-    vec3 tex = texture2D(uTex, vec2(vUv.x * uRepeat, vUv.y)).rgb;
-    float dif = 0.45 + 0.55 * max(dot(n, L1), 0.0);
-    col = tex * dif + pow(max(dot(n, h1), 0.0), 40.0) * 0.3;
-  }
-  gl_FragColor = vec4(col, 1.0);
-  ${END}
-}`;
-
-function tapeTexture() {
-  const tex = canvasTex(4096, 110, (x, w, h) => {
-    x.fillStyle = '#F6F3EC'; x.fillRect(0, 0, w, h);
-    const cm = w / 100;
-    x.fillStyle = '#141414';
-    for (let i = 0; i <= 1000; i++) {
-      const px = (i * cm) / 10;
-      const big = i % 10 === 0, half = i % 5 === 0;
-      const len = big ? 30 : half ? 22 : 13;
-      x.fillRect(px, 0, big ? 3 : 1.5, len);
-      x.fillRect(px, h - len, big ? 3 : 1.5, len);
+/* ------------------------------------------- Alterego: il metro da sarta, vero
+   Un nastro di 150 cm simulato (Verlet): cade sul tavolo di lana, si piega e si posa con il suo peso.
+   Centimetri davanti, pollici dietro, puntali in ottone. Col mouse lo sposti; tenendo premuto lo sollevi. */
+function tapePrint(W, H, inch) {
+  return canvasTex(W, H, (x, w, h) => {
+    x.fillStyle = inch ? '#EFE3C4' : '#F1EBDD';
+    x.fillRect(0, 0, w, h);
+    const r = seeded(inch ? 11 : 5);
+    for (let i = 0; i < w * 0.8; i++) { x.fillStyle = `rgba(80,60,30,${0.02 + r() * 0.035})`; x.fillRect(r() * w, r() * h, 1 + r() * 3, 1); }
+    const units = inch ? 59 : 150, sub = inch ? 8 : 10, per = w / (inch ? 150 / 2.54 : 150);
+    x.fillStyle = '#1B1B1B';
+    for (let i = 0; i <= units * sub; i++) {
+      const px = (i / sub) * per;
+      const major = i % sub === 0, half = i % (sub / 2) === 0;
+      const len = h * (major ? 0.3 : half ? 0.21 : 0.12);
+      const lw = major ? Math.max(2, per * 0.028) : Math.max(1, per * 0.014);
+      x.fillRect(px - lw / 2, 0, lw, len);
+      x.fillRect(px - lw / 2, h - len, lw, len);
     }
     x.textAlign = 'center'; x.textBaseline = 'middle';
-    for (let k = 1; k < 100; k++) {
-      const ten = k % 10 === 0;
-      x.fillStyle = ten ? RED : '#141414';
-      x.font = `${ten ? 600 : 500} ${ten ? 34 : 26}px "General Sans", sans-serif`;
-      x.fillText(String(k), k * cm, h / 2 + 1);
+    for (let k = 1; k <= units; k++) {
+      const red = inch ? k % 12 === 0 : k % 10 === 0;
+      x.fillStyle = red ? RED : '#1B1B1B';
+      x.font = `500 ${Math.round(h * (red ? 0.36 : 0.3))}px "General Sans", Arial, sans-serif`;
+      x.fillText(String(k), k * per, h / 2 + h * 0.03);
     }
   });
-  tex.wrapS = THREE.RepeatWrapping;
+}
+
+function woolTexture() {
+  const tex = canvasTex(256, 256, (x, w, h) => {
+    x.fillStyle = '#7f7f7f'; x.fillRect(0, 0, w, h);
+    const r = seeded(3);
+    for (let i = 0; i < 9000; i++) { const g = 100 + r() * 60; x.fillStyle = `rgba(${g},${g},${g},.25)`; x.fillRect(r() * w, r() * h, 1 + r() * 2, 1); }
+    x.strokeStyle = 'rgba(0,0,0,.08)'; x.lineWidth = 1.2;
+    for (let i = -h; i < w; i += 6) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i + h, h); x.stroke(); }
+  });
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(26, 26);
+  tex.colorSpace = THREE.NoColorSpace;
   return tex;
 }
 
-function band(ctx, tape) {
-  const u = {
-    uTime: { value: 0 }, uPull: { value: 0 }, uIntro: { value: 0 }, uPath: { value: tape ? 1 : 0 },
-    uW: { value: tape ? 0.42 : 1.15 }, uLen: { value: 10 }, uTex: { value: tape ? tapeTexture() : null }, uRepeat: { value: 2 },
+function tape(ctx) {
+  const { scene, camera, renderer, canvas, bg } = ctx;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  scene.fog = new THREE.Fog(bg, 11, 24);
+
+  const N = 220, LEN = 15, SEG = LEN / (N - 1), W = 0.16, TH = 0.006, STEP = 1 / 120, G = -7;
+  const pos = new Float32Array(N * 3), prev = new Float32Array(N * 3), side = new Float32Array(N * 3), tan = new Float32Array(N * 3), nor = new Float32Array(N * 3);
+  let cx = 2.2, grabbed = -1, acc = 0;
+  const grabAt = new THREE.Vector3(), hover = new THREE.Vector3(), hasHover = { on: false };
+
+  // ---------- materiali e oggetti
+  const maxTex = renderer.capabilities.maxTextureSize >= 8192 ? 8192 : 4096;
+  const front = tapePrint(maxTex, Math.round(maxTex / (LEN / W)), false);
+  const backT = tapePrint(maxTex, Math.round(maxTex / (LEN / W)), true);
+  [front, backT].forEach((t) => { t.anisotropy = renderer.capabilities.getMaxAnisotropy(); });
+  const tapeMat = (map) => new THREE.MeshPhysicalMaterial({ map, roughness: 0.46, clearcoat: 0.3, clearcoatRoughness: 0.45 });
+  const mkGeo = (back) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 2 * 3), 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(N * 2 * 3), 3));
+    const uv = new Float32Array(N * 2 * 2), idx = [];
+    for (let i = 0; i < N; i++) {
+      const u = i / (N - 1);
+      uv.set([u, back ? 1 : 0, u, back ? 0 : 1], i * 4);
+      if (i < N - 1) {
+        const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
+        if (back) idx.push(a, c, b, b, c, d); else idx.push(a, b, c, b, d, c);
+      }
+    }
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    return g;
   };
-  const mesh = new THREE.Mesh(
-    tape ? new THREE.PlaneGeometry(1, 1, 1100, 4) : new THREE.PlaneGeometry(1, 1, 500, 24),
-    new THREE.ShaderMaterial({ uniforms: u, vertexShader: BAND_VS, fragmentShader: BAND_FS, side: THREE.DoubleSide }),
-  );
-  mesh.frustumCulled = false;
-  const g = new THREE.Group();
-  g.add(mesh);
-  ctx.scene.add(g);
+  const faceF = new THREE.Mesh(mkGeo(false), tapeMat(front));
+  const faceB = new THREE.Mesh(mkGeo(true), tapeMat(backT));
+  [faceF, faceB].forEach((m) => { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; scene.add(m); });
+
+  const brass = new THREE.MeshStandardMaterial({ color: 0xD2B07A, metalness: 0.9, roughness: 0.22 });
+  const capGeo = new THREE.BoxGeometry(W * 1.02, TH * 2, 0.12);
+  const caps = [new THREE.Mesh(capGeo, brass), new THREE.Mesh(capGeo, brass)];
+  caps.forEach((m) => { m.castShadow = true; m.matrixAutoUpdate = false; scene.add(m); });
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ color: 0x22211F, roughness: 0.96, bumpMap: woolTexture(), bumpScale: 0.6 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const key = new THREE.DirectionalLight(0xFFF4E6, 2.4);
+  key.position.set(-4, 9, 5);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 30 });
+  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+  scene.add(key, key.target);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x2a2622, 0.35));
+  const rim = new THREE.DirectionalLight(0xffffff, 0.6);
+  rim.position.set(5, 3, -6);
+  scene.add(rim);
+
+  // ---------- simulazione
+  const drop = () => {
+    const r = seeded(Math.floor(Math.random() * 1e6));
+    const ph = r() * 6.28;
+    for (let i = 0; i < N; i++) {
+      const s = i / (N - 1);
+      const x = cx + Math.sin(s * 9.5 + ph) * 1.25 + (s - 0.5) * 2.6;
+      const z = Math.sin(s * 14 + ph * 0.7) * 0.95 + Math.cos(s * 4.1 + ph) * 0.35;
+      const y = 0.35 + s * 1.8 + Math.sin(s * 17) * 0.12;
+      pos.set([x, y, z], i * 3);
+      prev.set([x + (r() - 0.5) * 0.004, y + 0.004, z + (r() - 0.5) * 0.004], i * 3);
+    }
+    for (let i = 0; i < N; i++) {
+      const a = Math.max(i - 1, 0) * 3, b = Math.min(i + 1, N - 1) * 3;
+      const tx = pos[b] - pos[a], tz = pos[b + 2] - pos[a + 2], l = Math.hypot(tx, tz) || 1;
+      side.set([-tz / l, 0, tx / l], i * 3);
+    }
+  };
+
+  const step = () => {
+    const h2 = STEP * STEP;
+    for (let i = 0; i < N; i++) {
+      if (i === grabbed) continue;
+      const k = i * 3;
+      const onFloor = pos[k + 1] <= TH * 0.75;
+      const fr = onFloor ? 0.86 : 0.995;
+      for (let a = 0; a < 3; a++) {
+        const v = (pos[k + a] - prev[k + a]) * (a === 1 ? 0.995 : fr);
+        prev[k + a] = pos[k + a];
+        pos[k + a] += v + (a === 1 ? G * h2 : 0);
+      }
+    }
+    if (grabbed >= 0) {
+      const k = grabbed * 3;
+      pos[k] += (grabAt.x - pos[k]) * 0.35; pos[k + 1] += (grabAt.y - pos[k + 1]) * 0.35; pos[k + 2] += (grabAt.z - pos[k + 2]) * 0.35;
+      prev[k] = pos[k]; prev[k + 1] = pos[k + 1]; prev[k + 2] = pos[k + 2];
+    }
+    for (let it = 0; it < 14; it++) {
+      for (let i = 0; i < N - 1; i++) {
+        const a = i * 3, b = a + 3;
+        const dx = pos[b] - pos[a], dy = pos[b + 1] - pos[a + 1], dz = pos[b + 2] - pos[a + 2];
+        const d = Math.hypot(dx, dy, dz) || 1e-6, diff = (d - SEG) / d;
+        const wa = i === grabbed ? 0 : 1, wb = i + 1 === grabbed ? 0 : 1, ws = wa + wb || 1;
+        pos[a] += dx * diff * wa / ws; pos[a + 1] += dy * diff * wa / ws; pos[a + 2] += dz * diff * wa / ws;
+        pos[b] -= dx * diff * wb / ws; pos[b + 1] -= dy * diff * wb / ws; pos[b + 2] -= dz * diff * wb / ws;
+      }
+      if (it % 2 === 0) {
+        // il nastro è largo e piatto: si curva morbido, non fa spigoli
+        for (const [gap, min, kk] of [[2, SEG * 1.965, 0.45], [5, SEG * 4.7, 0.18]]) {
+          for (let i = 0; i < N - gap; i++) {
+            const a = i * 3, b = (i + gap) * 3;
+            const dx = pos[b] - pos[a], dy = pos[b + 1] - pos[a + 1], dz = pos[b + 2] - pos[a + 2];
+            const d = Math.hypot(dx, dy, dz) || 1e-6;
+            if (d >= min) continue;
+            const f = ((min - d) / d) * kk * 0.5;
+            if (i !== grabbed) { pos[a] -= dx * f; pos[a + 1] -= dy * f; pos[a + 2] -= dz * f; }
+            if (i + gap !== grabbed) { pos[b] += dx * f; pos[b + 1] += dy * f; pos[b + 2] += dz * f; }
+          }
+        }
+      }
+      for (let i = 0; i < N; i++) if (pos[i * 3 + 1] < TH * 0.5) pos[i * 3 + 1] = TH * 0.5;
+    }
+    // dove il nastro si sovrappone, un tratto si appoggia sull'altro
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 4; j < N; j++) {
+        const a = i * 3, b = j * 3;
+        const dx = pos[b] - pos[a], dz = pos[b + 2] - pos[a + 2];
+        if (dx * dx + dz * dz > W * W * 0.36) continue;
+        const dy = pos[b + 1] - pos[a + 1], gap = TH * 1.6;
+        if (Math.abs(dy) >= gap) continue;
+        const push = (gap - Math.abs(dy)) * 0.5, up = dy >= 0 ? b : a, dn = dy >= 0 ? a : b;
+        pos[up + 1] += push;
+        pos[dn + 1] = Math.max(TH * 0.5, pos[dn + 1] - push);
+      }
+    }
+    if (hasHover.on && grabbed < 0) {
+      for (let i = 0; i < N; i++) {
+        const k = i * 3;
+        if (pos[k + 1] > 0.25) continue;
+        const dx = pos[k] - hover.x, dz = pos[k + 2] - hover.z, d = Math.hypot(dx, dz), R = 0.32;
+        if (d < R && d > 1e-4) { pos[k] += (dx / d) * (R - d) * 0.35; pos[k + 2] += (dz / d) * (R - d) * 0.35; }
+      }
+    }
+  };
+
+  // ---------- geometria dal nastro simulato
+  const T = new THREE.Vector3(), S = new THREE.Vector3(), Nn = new THREE.Vector3(), F = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0), m4 = new THREE.Matrix4();
+  const build = () => {
+    for (let i = 0; i < N; i++) {
+      const a = Math.max(i - 1, 0) * 3, b = Math.min(i + 1, N - 1) * 3, k = i * 3;
+      T.set(pos[b] - pos[a], pos[b + 1] - pos[a + 1], pos[b + 2] - pos[a + 2]).normalize();
+      tan.set([T.x, T.y, T.z], k);
+      S.set(side[k], side[k + 1], side[k + 2]);
+      S.addScaledVector(T, -S.dot(T));
+      if (pos[k + 1] < 0.05) {
+        // appoggiato al tavolo il nastro sta piatto
+        F.crossVectors(T, UP).normalize();
+        if (F.dot(S) < 0) F.negate();
+        S.copy(F);
+      }
+      S.normalize();
+      if (i > 0 && S.x * side[k - 3] + S.y * side[k - 2] + S.z * side[k - 1] < 0) S.negate();
+      side.set([S.x, S.y, S.z], k);
+    }
+    for (let i = 1; i < N - 1; i++) {
+      const k = i * 3;
+      S.set(side[k - 3] + 2 * side[k] + side[k + 3], side[k - 2] + 2 * side[k + 1] + side[k + 4], side[k - 1] + 2 * side[k + 2] + side[k + 5]).normalize();
+      side.set([S.x, S.y, S.z], k);
+    }
+    const pf = faceF.geometry.attributes.position.array, nf = faceF.geometry.attributes.normal.array;
+    const pb = faceB.geometry.attributes.position.array, nb = faceB.geometry.attributes.normal.array;
+    for (let i = 0; i < N; i++) {
+      const k = i * 3;
+      T.set(tan[k], tan[k + 1], tan[k + 2]);
+      S.set(side[k], side[k + 1], side[k + 2]);
+      Nn.crossVectors(S, T).normalize();
+      nor.set([Nn.x, Nn.y, Nn.z], k);
+      for (let e = 0; e < 2; e++) {
+        const o = (i * 2 + e) * 3, sg = e ? 0.5 : -0.5;
+        for (let c = 0; c < 3; c++) {
+          const base = pos[k + c] + side[k + c] * W * sg;
+          pf[o + c] = base + nor[k + c] * TH * 0.5; nf[o + c] = nor[k + c];
+          pb[o + c] = base - nor[k + c] * TH * 0.5; nb[o + c] = -nor[k + c];
+        }
+      }
+    }
+    [faceF, faceB].forEach((m) => { m.geometry.attributes.position.needsUpdate = true; m.geometry.attributes.normal.needsUpdate = true; });
+    [[0, 1], [N - 1, N - 2]].forEach(([i, j], n) => {
+      const k = i * 3;
+      T.set(pos[k] - pos[j * 3], pos[k + 1] - pos[j * 3 + 1], pos[k + 2] - pos[j * 3 + 2]).normalize();
+      S.set(side[k], side[k + 1], side[k + 2]);
+      Nn.set(nor[k], nor[k + 1], nor[k + 2]);
+      m4.makeBasis(S, Nn, T).setPosition(pos[k] - T.x * 0.05, pos[k + 1] - T.y * 0.05, pos[k + 2] - T.z * 0.05);
+      caps[n].matrix.copy(m4);
+    });
+  };
+
+  // ---------- mouse: sposta il nastro, tieni premuto per sollevarlo
+  const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ndc = new THREE.Vector2();
+  const hit = (e) => {
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
+    ray.setFromCamera(ndc, camera);
+    return ray.ray.intersectPlane(plane, new THREE.Vector3());
+  };
+  const nearest = (p) => {
+    let best = -1, bd = 0.45;
+    for (let i = 0; i < N; i++) { const d = Math.hypot(pos[i * 3] - p.x, pos[i * 3 + 2] - p.z); if (d < bd) { bd = d; best = i; } }
+    return best;
+  };
+  canvas.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const p = hit(e);
+    if (!p) return;
+    hover.copy(p); hasHover.on = true;
+    if (grabbed >= 0) grabAt.set(p.x, 0.9, p.z);
+    canvas.style.cursor = grabbed >= 0 ? 'grabbing' : nearest(p) >= 0 ? 'grab' : '';
+  });
+  canvas.addEventListener('pointerleave', () => { hasHover.on = false; });
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const p = hit(e);
+    if (!p) return;
+    grabbed = nearest(p);
+    if (grabbed >= 0) { grabAt.set(p.x, 0.9, p.z); canvas.setPointerCapture(e.pointerId); }
+  });
+  const release = () => { grabbed = -1; canvas.style.cursor = ''; };
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release);
+  canvas.addEventListener('dblclick', () => { drop(); });
+
+  const target = new THREE.Vector3();
+  let dropped = false;
   return {
     layout(c) {
-      g.position.set(c.mobile ? 0 : c.halfW * (tape ? 0.45 : 0.48), tape ? 0.2 : 0.55, 0);
-      g.scale.setScalar(c.mobile ? 0.6 : tape ? 1 : 0.85);
+      cx = c.mobile ? 0 : 1.9;
+      target.set(c.mobile ? 0 : 0.5, 0, 0.15);
+      if (!dropped) {
+        // il nastro cade solo quando la scena sa se è su telefono o su schermo grande
+        dropped = true;
+        drop();
+        if (reduce) { for (let i = 0; i < 900; i++) step(); }
+        build();
+      }
     },
     update(t, dt, p, c) {
-      u.uTime.value = t; u.uPull.value = p; u.uIntro.value = ease(t / (tape ? 3 : 2.2));
-      g.rotation.y = (tape ? t * 0.2 : 0) + c.smooth.x * 0.35;
-      g.rotation.x = -c.smooth.y * 0.2 + (tape ? 0.25 : 0);
-      g.rotation.z = tape ? 0 : 0.55;
+      if (dt > 0) {
+        acc = Math.min(acc + dt, STEP * 4);
+        while (acc >= STEP) { step(); acc -= STEP; }
+        build();
+      }
+      const far = c.mobile ? 1.15 : 1;
+      camera.position.set(target.x + c.smooth.x * 0.35, (3.6 - p * 1.1) * far, target.z + (4.1 - p * 0.8) * far);
+      camera.lookAt(target);
+      key.target.position.copy(target);
     },
   };
 }
@@ -415,8 +602,7 @@ function invite(ctx) {
 
 const SCENES = {
   dress, thread, invite,
-  ribbon: (ctx) => band(ctx, false),
-  tape: (ctx) => band(ctx, true),
+  tape,
 };
 
 export function mount(section, opts = {}) {

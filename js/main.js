@@ -9,6 +9,8 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const root = document.documentElement;
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// telefono: niente hero fissate allo schermo, Safari riempirebbe sotto le sue barre con un colore pieno
+const MOBILE = window.matchMedia('(max-width: 760px)').matches;
 if (reduce) root.classList.add('reduced');
 
 const PAGE = document.body.dataset.page;
@@ -386,6 +388,7 @@ function initFrameHero() {
   load(0).then(() => {
     ready = true;
     section.classList.add('vhero--live');
+    if (MOBILE) { tl.duration(6.5); gsap.delayedCall(0.9, () => tl.play()); }
     size();
     let k = 0;
     const next = () => {
@@ -400,7 +403,7 @@ function initFrameHero() {
   const state = { f: 0 };
   const tl = gsap.timeline({
     defaults: { ease: 'none' },
-    scrollTrigger: { trigger: section, start: 'top top', end: '+=260%', pin: true, scrub: 1, anticipatePin: 1 },
+    ...(MOBILE ? { paused: true } : { scrollTrigger: { trigger: section, start: 'top top', end: '+=260%', pin: true, scrub: 1, anticipatePin: 1 } }),
   });
   tl.to(state, { f: N - 1, duration: 1, onUpdate: () => { const i = Math.round(state.f); if (i !== current) { current = i; draw(i); } } }, 0)
     .to('.vhero__hint', { opacity: 0, duration: 0.06 }, 0)
@@ -717,7 +720,7 @@ function initHero3D() {
     gsap.from($$('.w > span', title), { yPercent: 110, duration: 1.2, ease: 'expo.out', stagger: 0.06, delay: 0.3 });
     gsap.from($$('.h3d__body > *', el), { opacity: 0, y: 20, duration: 1, ease: 'expo.out', stagger: 0.08, delay: 0.6 });
   }
-  import('./hero3d.js').then((m) => m.mount(el, { brands: BRANDS })).catch((err) => console.warn('Hero 3D non disponibile', err));
+  import(`./hero3d.js${new URL(import.meta.url).search}`).then((m) => m.mount(el, { brands: BRANDS })).catch((err) => console.warn('Hero 3D non disponibile', err));
 }
 
 /* Hero d'immagine: "cinema" (sposa, sposo, cerimonia) e "dal dettaglio all'abito" (brand) */
@@ -749,7 +752,7 @@ function initCinema(el) {
     .from($('.cn__media', el), { opacity: 0, scale: 1.06, duration: 2.4, ease: 'power2.out' }, 0)
     .from(chars, { opacity: 0, duration: 1.2, ease: 'power1.out', stagger: 0.07 }, 0.6)
     .from($$('.cn__copy > :not(.cn__title), .cn__hint', el), { opacity: 0, y: 10, duration: 1.2, ease: 'expo.out', stagger: 0.12 }, 1.1);
-  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: 'bottom bottom', scrub: 0.8 } })
+  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: MOBILE ? 'bottom top' : 'bottom bottom', scrub: 0.8 } })
     .fromTo(im, { objectPosition: from, scale: 1 }, { objectPosition: to, scale: 1.07, duration: 1 }, 0)
     .to($('.cn__hint', el), { opacity: 0, duration: 0.08 }, 0)
     .to($('.cn__copy', el), { opacity: 0, y: -16, duration: 0.3 }, 0.05)
@@ -759,7 +762,7 @@ function initCinema(el) {
 /* Brand: si parte dal pizzo in primissimo piano e la camera si allontana fino all'abito */
 function initZoom(el) {
   const im = $('.bz__img', el);
-  const u = +el.dataset.u, v = +el.dataset.v, S = +el.dataset.s || 3;
+  const u = +el.dataset.u, v = +el.dataset.v, S = MOBILE ? 1.7 : +el.dataset.s || 2.4;
   const aim = () => {
     const W = im.clientWidth, H = im.clientHeight;
     const w = im.naturalWidth || 3508, h = im.naturalHeight || 2480;
@@ -774,6 +777,17 @@ function initZoom(el) {
   gsap.from(im, { opacity: 0, duration: 2, ease: 'power2.out' });
   gsap.from($$('.bz__open, .cn__hint', el), { opacity: 0, y: 10, duration: 1.4, ease: 'expo.out', stagger: 0.2, delay: 0.6 });
   gsap.set($('.bz__copy', el), { opacity: 0, y: 16 });
+  if (MOBILE) {
+    // su telefono la camera si allontana da sola, appena la foto è pronta
+    gsap.set(im, { scale: S });
+    const play = () => gsap.timeline({ delay: 0.5 })
+      .to(im, { scale: 1, duration: 3.4, ease: 'power2.inOut' }, 0)
+      .to($$('.bz__open, .cn__hint', el), { opacity: 0, duration: 0.6 }, 0.9)
+      .to($('.bz__shade', el), { opacity: 1, duration: 1 }, 2.4)
+      .to($('.bz__copy', el), { opacity: 1, y: 0, duration: 1, ease: 'expo.out' }, 2.8);
+    im.complete ? play() : im.addEventListener('load', play, { once: true });
+    return;
+  }
   gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: 'bottom bottom', scrub: 0.8 } })
     .fromTo(im, { scale: S }, { scale: 1, duration: 0.8, ease: 'power2.inOut' }, 0)
     .to($$('.bz__open, .cn__hint', el), { opacity: 0, duration: 0.12 }, 0.04)

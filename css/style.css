@@ -1101,3 +1101,19 @@ body:has(.sheet:not([hidden])) .bar--over .bar__menu { background: var(--surface
   .cflow__nav { margin-top: 2.4rem; justify-content: space-between; gap: 1rem; }
   .cflow__name { min-width: 0; }
 }
+
+/* =========================================================
+   v29
+   ========================================================= */
+/* Blocco sotto le hero: il testo secondario va tutto a destra */
+.lede__in { max-width: none; }
+.lede__in > p:not(:first-of-type) { justify-self: end; width: fit-content; max-width: 30rem; }
+
+/* Telefono: le hero scorrono con la pagina, la barra sopra la foto scorre via con lei */
+@media (max-width: 760px) {
+  .cn, .bz { height: 100lvh; }
+  .cn__pin, .bz__pin { position: relative; }
+  .bar--over { position: absolute; }
+  .has-over .bar:not(.bar--over) { animation: barIn .6s var(--ease); }
+}
+@keyframes barIn { from { transform: translateY(-100%); } }

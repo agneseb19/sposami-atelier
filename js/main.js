@@ -623,15 +623,45 @@ function initBrands() {
   $('#brand-index').hidden = true;
   $('#brand-one').hidden = false;
   document.title = `${b.n} | Brand | Sposami Atelier`;
+  const list = CATALOG.filter((i) => i.b === b.n);
+  const n = list.length;
   $('#bname').textContent = b.n;
   $('#bdesc').textContent = b.d;
-  const list = CATALOG.filter((i) => i.b === b.n);
-  $('#bcount').textContent = list.length ? `${list.length} abiti in atelier` : 'Modelli disponibili in atelier';
-  if (b.tile) { $('#bimg').src = img(b.tile, 1000, 1250); $('#bimg').alt = `Abito ${b.n}`; } else $('#bimg').closest('.split__pic').remove();
-  $('#bgrid').innerHTML = list.length ? list.map(cardHTML).join('') : '<p class="empty">Chiedi in atelier i modelli disponibili di questo brand.</p>';
+  $('#bcount').textContent = n ? `${n} abiti in atelier` : 'Modelli disponibili in atelier';
+  const hero = b.tile || list[0]?.img[0];
+  if (hero) { $('#bimg').src = img(hero, 1800, 2250); $('#bimg').alt = `Abito ${b.n}`; }
+  const book = `prenota.html?abito=${encodeURIComponent(b.n)}`;
+  $('#bbook').href = book; $('#binv-book').href = book;
+  $('#binv-lead').textContent = `Vieni in atelier a scoprire gli abiti ${b.n}: la prova è gratuita e senza impegno, e la nostra sartoria li adatta su di te.`;
+  $('#binv-try').href = list[0] ? `prova-virtuale.html?id=${encodeURIComponent(list[0].id)}` : 'prova-virtuale.html';
+  if (!n) $('#binv-try').remove();
+
+  // collezione con filtri per stile
+  const grid = $('#bgrid');
+  const styles = [...new Set(list.map((i) => i.s))].sort();
+  const filter = $('#bfilter');
+  filter.innerHTML = n > 1 && styles.length > 1 ? ['Tutti', ...styles].map((st, k) => `<button type="button" class="chip" aria-pressed="${k === 0}" data-s="${esc(st)}">${esc(st)}${k ? `<span class="n">${list.filter((i) => i.s === st).length}</span>` : ''}</button>`).join('') : '';
+  const draw = (st) => {
+    const l = st === 'Tutti' ? list : list.filter((i) => i.s === st);
+    grid.innerHTML = l.length ? l.map(cardHTML).join('') : '<p class="empty">Chiedi in atelier i modelli disponibili di questo brand.</p>';
+    animateIn($$('.card', grid));
+    ScrollTrigger.refresh();
+  };
+  filter.addEventListener('click', (e) => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    $$('.chip', filter).forEach((x) => x.setAttribute('aria-pressed', String(x === c)));
+    draw(c.dataset.s);
+  });
+  draw('Tutti');
+
+  // altre maison
+  const others = BRANDS.filter((x) => x.k !== b.k && x.g === b.g && (x.tile || CATALOG.some((i) => i.b === x.n)));
+  $('#bmore').innerHTML = others.map((x) => `<a class="bmore__item" href="brand.html?b=${x.k}"><div class="bmore__pic">${typeOrPic(x, 600, 800, `Abito ${x.n}`)}</div><span>${esc(x.n)}</span></a>`).join('');
+
   if (!reduce) {
-    gsap.from('#brand-one .split__copy > *, #brand-one .split__pic', { opacity: 0, y: 30, duration: 1.1, ease: 'expo.out', stagger: 0.08, delay: 0.3 });
-    animateIn($$('#bgrid .card'));
+    gsap.fromTo('.bh__media img', { scale: 1.08, opacity: 0 }, { scale: 1, opacity: 1, duration: 2.4, ease: 'power2.out' });
+    gsap.from('.bh__copy > *', { opacity: 0, y: 14, duration: 1.2, ease: 'expo.out', stagger: 0.1, delay: 0.5 });
+    gsap.to('.bh__media img', { yPercent: 8, ease: 'none', scrollTrigger: { trigger: '.bh', start: 'top top', end: 'bottom top', scrub: true } });
   }
 }
 
@@ -773,7 +803,7 @@ function initHero3D() {
 
 /* Hero d'immagine: "cinema" (sposa, sposo, cerimonia) e "dal dettaglio all'abito" (brand) */
 function initImageHero() {
-  const el = $('[data-ih]');
+  const el = $$('[data-ih]').find((x) => !x.closest('[hidden]'));
   if (!el) return;
   if (el.dataset.ih === 'cinema') initCinema(el);
   if (el.dataset.ih === 'zoom') initZoom(el);
@@ -836,7 +866,7 @@ function initZoom(el) {
 
 /* La barra resta trasparente, con logo e testi bianchi, finché si è sopra la foto della hero */
 function initBarOver() {
-  const hero = $('.vhero, .cn, .bz');
+  const hero = $$('.vhero, .cn, .bz, .bh').find((el) => !el.closest('[hidden]'));
   const bar = $('.bar');
   if (!hero || !bar) return;
   document.body.classList.add('has-over');

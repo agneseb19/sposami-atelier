@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..600;1,6..96,400&family=Pinyon+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=2611261140">
+<link rel="stylesheet" href="css/style.css?v=2611261142">
 </head>
 <body data-page="brands">
 <a class="skip" href="#main">Passa al contenuto</a>
@@ -57,18 +57,37 @@
   </div>
 </section></div>
 <div id="brand-one" hidden>
-  <section class="phead">
-    <div class="split split--top" style="padding:0">
-      <div class="split__copy">
-        <h1 id="bname" style="font-family:var(--f-display);font-size:clamp(3rem,1.4rem + 6.6vw,8rem);line-height:.9;letter-spacing:-.025em"></h1>
-        <p class="lead" id="bdesc"></p>
-        <p class="muted" id="bcount"></p>
-        <a class="btn btn--accent" href="prenota.html">Prenota una prova</a>
-      </div>
-      <div class="split__pic"><img id="bimg" alt=""></div>
+  <section class="bh" aria-labelledby="bname">
+    <div class="bh__media"><img id="bimg" alt="" fetchpriority="high"></div>
+    <div class="bh__shade" aria-hidden="true"></div>
+    <div class="bh__copy">
+      <p class="bh__kicker">La maison</p>
+      <h1 id="bname" class="bh__title"></h1>
+      <p class="bh__count" id="bcount"></p>
+      <div class="hero-ctas"><a class="btn" href="#collezione">Scopri la collezione</a><a class="btn" id="bbook" href="prenota.html">Prenota una prova</a></div>
     </div>
   </section>
-  <section class="section" aria-labelledby="bgrid-t" style="padding-top:clamp(3rem,6vw,5rem)"><h2 class="sr" id="bgrid-t">Abiti del brand</h2><div class="grid" id="bgrid"></div></section>
+  <section class="section alt-c bm" aria-label="La maison">
+    <p class="alt-kicker" data-in>La maison</p>
+    <p class="bm__txt" id="bdesc" data-in></p>
+  </section>
+  <section class="section bcoll" id="collezione" aria-labelledby="bgrid-t">
+    <div class="bcoll__head" data-in>
+      <h2 class="head" id="bgrid-t">La collezione</h2>
+      <div class="chips" id="bfilter" role="group" aria-label="Filtra per stile"></div>
+    </div>
+    <div class="grid" id="bgrid"></div>
+  </section>
+  <section class="section alt-c binv" aria-labelledby="binv-t">
+    <p class="alt-kicker" data-in>In atelier, su appuntamento</p>
+    <h2 class="head" id="binv-t" data-in>Provali dal vivo</h2>
+    <p class="alt-book__lead" id="binv-lead" data-in></p>
+    <div class="binv__cta" data-in><a class="btn btn--accent" id="binv-book" href="prenota.html">Prenota la prova gratuita</a><a class="btn btn--line" id="binv-try" href="prova-virtuale.html">Provali con l'AI</a></div>
+  </section>
+  <section class="section bmore" aria-labelledby="bmore-t">
+    <h2 class="head" id="bmore-t" data-in>Altre maison</h2>
+    <div class="bmore__row" id="bmore"></div>
+  </section>
 </div>
 </main>
 <footer class="foot">
@@ -97,7 +116,7 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js" defer></script>
-<script src="js/catalog.js?v=2611261140" defer></script>
-<script type="module" src="js/main.js?v=2611261140"></script>
+<script src="js/catalog.js?v=2611261142" defer></script>
+<script type="module" src="js/main.js?v=2611261142"></script>
 </body>
 </html>

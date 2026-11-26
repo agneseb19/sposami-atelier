@@ -48,7 +48,8 @@ const brandByName = (n) => BRANDS.find((b) => b.n === n);
    ========================================================= */
 let lenis = null;
 // telefono: lo scroll lo gestisce GSAP, così le hero si fermano senza position:fixed
-if (MOBILE && !reduce) ScrollTrigger.normalizeScroll(true);
+// allowNestedScroll: le file di card (galleria abito, Collezione 2027, carosello) restano scorrevoli col dito
+if (MOBILE && !reduce) ScrollTrigger.normalizeScroll({ allowNestedScroll: true });
 const PIN_TYPE = MOBILE ? 'transform' : undefined;
 if (!reduce && window.Lenis && !MOBILE) {
   lenis = new window.Lenis({ lerp: 0.1 });
@@ -870,7 +871,7 @@ function initWords() {
 /* Foto che si aprono come una tendina */
 function initImageReveals() {
   if (reduce) return;
-  const sel = '.story__pic, .services__pic, .who__pic, .intro__pic, .bcard__pic, .pinned__item .pic, .gal__pic, .quiz__side';
+  const sel = '.story__pic, .services__pic, .who__pic, .intro__pic, .bcard__pic, .gal__pic, .quiz__side';
   ScrollTrigger.batch(sel, {
     start: 'top 92%', once: true,
     onEnter: (els) => gsap.fromTo(els, { clipPath: 'inset(18% 0 18% 0 round 22px)', scale: 0.94 }, { clipPath: 'inset(0% 0 0% 0 round 22px)', scale: 1, duration: 1.3, ease: 'expo.out', stagger: 0.08 }),

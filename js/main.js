@@ -372,89 +372,61 @@ function canvasHeroFrames(section, canvas, N) {
     });
   }
 
-  const pending = new Set(Array.from({ length: N }, (_, i) => i));
-  // Un caricamento prepara le anteprime distanti per gli swipe veloci.
-  // Gli altri seguono la posizione del dito, partendo dai fotogrammi consecutivi.
-  async function loadFrames(previews) {
-    while (pending.size) {
-      let index;
-      if (previews) {
-        for (const i of pending) {
-          if (i % 10 === 0 || i === N - 1) { index = i; break; }
-        }
-      }
-      if (index === undefined) {
-        for (let d = 0; index === undefined; d++) {
-          if (pending.has(current + d)) index = current + d;
-          else if (pending.has(current - d)) index = current - d;
-        }
-      }
-      pending.delete(index);
-      const im = new Image();
-      im.decoding = 'async';
-      try {
-        const loaded = new Promise((resolve, reject) => {
-          im.onload = resolve;
-          im.onerror = reject;
-        });
-        im.src = src(index);
-        await loaded;
-        if (im.decode) await im.decode();
-        imgs[index] = im;
-        scheduleDraw();
-      } catch {
-        // Il poster o il fotogramma disponibile più vicino rimane visibile.
-      }
+  const loading = new Set();
+  const failed = new Set();
+  const indices = Array.from({ length: N }, (_, i) => i);
+  const previews = indices.filter(i => i % 20 === 0 || i === N - 1);
+  let direction = 1;
+  function fillBuffer() {
+    // Sul telefono conserva solo i fotogrammi vicini e poche anteprime per i salti lunghi.
+    const radius = MOBILE ? 6 : N;
+    const wanted = [current];
+    for (let d = 1; d <= radius; d++) {
+      wanted.push(current + direction * d, current - direction * d);
+    }
+    wanted.splice(3, 0, ...previews);
+    if (MOBILE) {
+      imgs.forEach((im, i) => {
+        if (im && Math.abs(i - current) > radius && !previews.includes(i)) imgs[i] = null;
+      });
+    }
+    for (const i of wanted) {
+      if (loading.size >= 4) break;
+      if (i < 0 || i >= N || imgs[i] || loading.has(i) || failed.has(i)) continue;
+      loading.add(i);
+      load(i);
+    }
+  }
+  async function load(i) {
+    const im = new Image();
+    im.decoding = 'async';
+    try {
+      const loaded = new Promise((resolve, reject) => {
+        im.onload = resolve;
+        im.onerror = reject;
+      });
+      im.src = src(i);
+      await loaded;
+      if (im.decode) await im.decode();
+      imgs[i] = im;
+      scheduleDraw();
+    } catch {
+      failed.add(i);
+    } finally {
+      loading.delete(i);
+      fillBuffer();
     }
   }
   size();
-  loadFrames(false);
-  loadFrames(false);
-  loadFrames(false);
-  loadFrames(true);
+  fillBuffer();
   window.addEventListener('resize', size);
 
   return (frame) => {
     if (frame === current) return;
+    direction = Math.sign(frame - current);
     current = frame;
+    fillBuffer();
     scheduleDraw();
-  };
-}
-
-function mobileHeroFrames(section, canvas, count) {
-  const video = document.createElement('video');
-  if (!video.canPlayType('video/webm; codecs="vp9"')) return canvasHeroFrames(section, canvas, count);
-  video.className = 'vhero__video';
-  video.muted = true;
-  video.playsInline = true;
-  video.preload = 'auto';
-  video.setAttribute('aria-hidden', 'true');
-  canvas.after(video);
-
-  let frame = 0;
-  let fallback;
-  function seek() {
-    if (fallback || video.seeking || video.readyState < 2) return;
-    const time = frame / 30;
-    if (Math.abs(video.currentTime - time) > 1 / 60) video.currentTime = time;
-  }
-  video.addEventListener('loadeddata', () => {
-    section.classList.add('vhero--live');
-    seek();
-  });
-  video.addEventListener('seeked', seek);
-  video.addEventListener('canplay', seek);
-  video.addEventListener('error', () => {
-    video.remove();
-    section.classList.remove('vhero--live');
-    fallback = canvasHeroFrames(section, canvas, count);
-    fallback(frame);
-  }, { once: true });
-  video.src = 'assets/hero/scroll-mobile.webm';
-  return (next) => {
-    frame = next;
-    if (fallback) fallback(frame);
-    else seek();
   };
 }
 
@@ -465,7 +437,7 @@ function initFrameHero() {
   const stage = $('.vhero__stage', section);
   const N = 140;
   if (MOBILE) section.classList.add('vhero--sticky');
-  const showFrame = MOBILE ? mobileHeroFrames(section, canvas, N) : canvasHeroFrames(section, canvas, N);
+  const showFrame = canvasHeroFrames(section, canvas, N);
   const state = { f: 0 };
   const tl = gsap.timeline({
     defaults: { ease: 'none' },

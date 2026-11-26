@@ -1441,3 +1441,15 @@ body:has(.sheet:not([hidden])) .bar--over .bar__menu { background: var(--surface
   .stmt__title { max-width: none; padding-right: 7.5rem; font-size: clamp(1.9rem, 8.2vw, 2.3rem); text-wrap: balance; }
 }
 @media (max-width: 760px) { .stmt__list { gap: 0; } .stmt__list b { font-size: 11px; letter-spacing: .1em; } }
+
+/* v47: "Da qui inizia" su telefono: prima il titolo, poi una foto piccola e centrata (niente seconda foto a tutto schermo) */
+@media (max-width: 760px) {
+  .stmt { grid-template-areas: "title" "pic" "lead" "note" "list"; }
+  .stmt__title { grid-area: title; align-self: auto; z-index: auto; color: var(--ink); text-align: center; margin: 0 auto; padding: 0 var(--m) 2.2rem; }
+  .stmt__title::before { color: var(--muted); }
+  .stmt__pic { width: 62%; margin: 0 auto; display: grid; gap: .7rem; justify-items: center; }
+  .stmt__frame { width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r); }
+  .stmt__frame::after { display: none; }
+  .stmt__pic figcaption { position: static; color: var(--muted); font-size: 10px; }
+  .stmt__lead { padding-top: 2.2rem; }
+}

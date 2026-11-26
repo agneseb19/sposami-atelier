@@ -1404,3 +1404,13 @@ body:has(.sheet:not([hidden])) .bar--over .bar__menu { background: var(--surface
 
 /* v42: i testi della hero home si muovono su un livello proprio */
 @media (max-width: 760px) { .vhero__step, .vhero__claim, .vhero__end, .vhero__canvas { will-change: transform, opacity; } }
+
+/* v45: home, "Da qui inizia il giorno più bello" su telefono: foto e testo affiancati, i punti sotto */
+@media (max-width: 760px) {
+  .stmt { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.6rem 1rem; align-items: center; }
+  .stmt__title, .stmt__lead, .stmt__list { grid-column: 1 / -1; }
+  .stmt__pic { grid-column: 1; width: auto; margin: 0; grid-template-columns: 1fr; gap: .5rem; }
+  .stmt__pic figcaption { order: 0; writing-mode: horizontal-tb; transform: none; font-size: 10px; }
+  .stmt__note { grid-column: 2; font-size: 13.5px; line-height: 1.6; }
+  .stmt__list { margin-top: 0; }
+}

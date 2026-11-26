@@ -14,7 +14,7 @@ if (reduce) root.classList.add('reduced');
 const PAGE = document.body.dataset.page;
 const CATALOG = window.CATALOG || [];
 const MEDIA = 'https://static.wixstatic.com/media/';
-const img = (id, w, h) => `${MEDIA}${id}/v1/fill/w_${w},h_${h},al_c,q_82,enc_auto/${id.split('~')[0].split('.')[0]}.jpg`;
+const img = (id, w, h) => id.startsWith('assets/') ? id : `${MEDIA}${id}/v1/fill/w_${w},h_${h},al_c,q_82,enc_auto/${id.split('~')[0].split('.')[0]}.jpg`;
 const esc = (s = '') => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ARR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M0 5h12M8.5 1 12.5 5 8.5 9" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
 
@@ -32,7 +32,7 @@ const BRANDS = [
   { k: 'natali-styran', n: 'Natali Styran', g: 'donna', tile: 'e81dc4_b7f9f35da8cc4436bb241f914da20a80~mv2.webp', d: 'Brand di alta gamma conosciuto per il suo stile sofisticato e contemporaneo. Le collezioni Natali Styran combinano design innovativo, materiali esclusivi e dettagli couture per creare abiti unici.' },
   { k: 'musani', n: 'Musani', g: 'donna', tile: 'e81dc4_3b69e082cf53498b8a18b3595bd325f8~mv2.webp', d: 'Storico marchio italiano che interpreta la sposa con eleganza, romanticismo e cura sartoriale. Gli abiti Musani uniscono tradizione, qualità dei tessuti e design raffinato.' },
   { k: 'anna-bella', n: 'Anna Bella', g: 'donna', tile: '268ca4_56ead1b4fce141219886ecaff636ca06~mv2.jpg', d: "Tra i marchi selezionati dall'atelier: chiedi i modelli disponibili durante la prova." },
-  { k: 'anna-sposa', n: 'Anna Sposa', g: 'donna', d: "Tra i marchi selezionati dall'atelier: chiedi i modelli disponibili durante la prova." },
+  { k: 'anna-sposa', n: 'Anna Sposa', g: 'donna', tile: 'assets/anna-sposa/samba-1.jpg', d: "Tra i marchi selezionati dall'atelier: chiedi i modelli disponibili durante la prova." },
   { k: 'alberto-palatchi', n: 'Alberto Palatchi', g: 'donna', tile: 'e81dc4_a5e6715b78f24e5d9d9b8b8a00a600b9~mv2.webp', d: "Alberto Palatchi è un brand di abiti da sposa che unisce l'eleganza della tradizione sartoriale spagnola a uno stile contemporaneo e raffinato. Le sue collezioni si distinguono per linee pulite, tessuti pregiati e dettagli ricercati, pensati per valorizzare la femminilità con classe e modernità." },
   { k: 'angelo-toma', n: 'Angelo Toma', g: 'uomo', tile: 'e81dc4_f8920630d4cc429b9a5991a9a88dfbbf~mv2.jpg', d: "Brand italiano che interpreta l'eleganza classica con uno stile raffinato e senza tempo. Le collezioni Angelo Toma si distinguono per la qualità sartoriale, i tessuti pregiati e i dettagli ricercati, pensati per valorizzare ogni sposa." },
   { k: 'petrelli', n: 'Petrelli', g: 'uomo', tile: 'e81dc4_5190f6a2e7574e22bbbd125e5a541166~mv2.jpeg', d: 'Storica maison italiana specializzata in abiti da cerimonia e da sposa. Petrelli unisce tradizione artigianale e gusto contemporaneo, proponendo creazioni eleganti, curate nei minimi dettagli e realizzate con materiali di alta qualità.' },

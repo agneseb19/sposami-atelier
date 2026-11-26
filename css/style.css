@@ -1333,6 +1333,10 @@ body:has(.sheet:not([hidden])) .bar--over .bar__menu { background: var(--surface
   /* hero: tutto schermo, testi sopra la barra in basso */
   .cn, .bz { height: 100lvh; }
   .cn__pin, .bz__pin { position: relative; height: 100lvh; }
+  .bz--animated { height: 200lvh; }
+  .bz--animated .bz__pin { position: sticky; top: 0; }
+  body[data-page="home"] .bar--over,
+  body:has(.bz--animated) .bar--over { position: fixed; }
   .cn__copy, .bz__copy, .bh__copy { bottom: var(--safe-b); }
   .vhero__step { bottom: calc(var(--safe-b) + .5rem); }
   .vhero__claim, .vhero__end { bottom: var(--safe-b) !important; }

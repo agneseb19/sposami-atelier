@@ -9,7 +9,6 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const root = document.documentElement;
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-// telefono: niente hero fissate allo schermo, Safari riempirebbe sotto le sue barre con un colore pieno
 const MOBILE = window.matchMedia('(max-width: 760px)').matches;
 if (reduce) root.classList.add('reduced');
 
@@ -402,8 +401,11 @@ function initFrameHero() {
   const state = { f: 0 };
   const tl = gsap.timeline({
     defaults: { ease: 'none' },
-    // telefono: nessun pin (scroll nativo e fluido), i fotogrammi scorrono mentre la hero esce
-    scrollTrigger: MOBILE ? { trigger: section, start: 'top top', end: 'bottom top', scrub: 0.5 } : { trigger: section, start: 'top top', end: '+=260%', pin: true, scrub: 1, anticipatePin: 1 },
+    scrollTrigger: {
+      trigger: section, start: 'top top',
+      end: () => window.matchMedia('(max-width: 760px)').matches ? '+=' + section.offsetHeight : '+=260%',
+      pin: true, scrub: MOBILE ? true : 1, anticipatePin: 1,
+    },
   });
   tl.to(state, { f: N - 1, duration: 1, onUpdate: () => { const i = Math.round(state.f); if (i !== current) { current = i; draw(i); } } }, 0)
     .to('.vhero__hint', { opacity: 0, duration: 0.06 }, 0)
@@ -854,10 +856,12 @@ function initZoom(el) {
   im.complete ? aim() : im.addEventListener('load', aim, { once: true });
   ScrollTrigger.addEventListener('refreshInit', aim);
   if (reduce) return;
+  el.classList.add('bz--animated');
+  const stage = $('.bz__pin', el);
   gsap.from(im, { opacity: 0, duration: 2, ease: 'power2.out' });
   gsap.from($$('.bz__open, .cn__hint', el), { opacity: 0, y: 10, duration: 1.4, ease: 'expo.out', stagger: 0.2, delay: 0.6 });
   gsap.set($('.bz__copy', el), { opacity: 0, y: 16 });
-  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: MOBILE ? 'bottom top' : 'bottom bottom', scrub: 0.8 } })
+  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: () => '+=' + (el.offsetHeight - stage.offsetHeight), scrub: MOBILE ? true : 0.8 } })
     .fromTo(im, { scale: S }, { scale: 1, duration: 0.8, ease: 'power2.inOut' }, 0)
     .to($$('.bz__open, .cn__hint', el), { opacity: 0, duration: 0.12 }, 0.04)
     .to($('.bz__shade', el), { opacity: 1, duration: 0.25 }, 0.6)

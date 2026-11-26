@@ -381,6 +381,8 @@ function canvasHeroFrames(section, canvas, N) {
   // in sequenza dal primo, nella stessa direzione in cui si scorre; 4 alla volta
   const order = Array.from({ length: M }, (_, i) => i);
   let next = 0, active = 0;
+  let allLoaded;
+  const ready = new Promise((r) => { allLoaded = r; });
   // ImageBitmap: decodificato fuori dal thread principale e pronto per la scheda grafica, disegnarlo non costa quasi nulla
   const bitmap = 'createImageBitmap' in window;
   async function load(i) {
@@ -402,19 +404,21 @@ function canvasHeroFrames(section, canvas, N) {
   function pump() {
     while (active < 4 && next < order.length) {
       active++;
-      load(order[next++]).finally(() => { active--; pump(); });
+      load(order[next++]).finally(() => { active--; if (next >= order.length && !active) allLoaded(); pump(); });
     }
   }
   size();
   pump();
   window.addEventListener('resize', size);
 
-  return (frame) => {
+  const show = (frame) => {
     const f = Math.round((frame * (M - 1)) / (N - 1));
     if (f === current) return;
     current = f;
     scheduleDraw();
   };
+  show.ready = ready;
+  return show;
 }
 
 function initFrameHero() {
@@ -423,9 +427,21 @@ function initFrameHero() {
   const canvas = $('.vhero__canvas', section);
   const stage = $('.vhero__stage', section);
   const N = 140;
-  if (MOBILE) section.classList.add('vhero--sticky');
   const showFrame = canvasHeroFrames(section, canvas, N);
   const state = { f: 0 };
+  if (MOBILE) {
+    // telefono: la hero è un video che parte da solo; la pagina scorre con lo scroll nativo, senza scatti
+    const tl = gsap.timeline({ paused: true })
+      .to(state, { f: N - 1, duration: 4.4, ease: 'power1.inOut', onUpdate: () => showFrame(Math.round(state.f)) }, 0)
+      .to('.vhero__step--name', { opacity: 0, y: -20, duration: 0.6, ease: 'power2.in' }, 1.5)
+      .fromTo('.vhero__claim', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out' }, 2.1)
+      .to('.vhero__claim', { opacity: 0, y: -16, duration: 0.6, ease: 'power2.in' }, 3.6)
+      .fromTo('.vhero__end', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out' }, 4.2);
+    gsap.set(['.vhero__claim', '.vhero__end'], { opacity: 0 });
+    gsap.from('.vhero__step--name > *', { opacity: 0, y: 24, duration: 0.8, ease: 'expo.out', stagger: 0.1, delay: 0.1 });
+    Promise.race([showFrame.ready, new Promise((r) => setTimeout(r, 2500))]).then(() => gsap.delayedCall(0.8, () => tl.play()));
+    return;
+  }
   const tl = gsap.timeline({
     defaults: { ease: 'none' },
     scrollTrigger: {

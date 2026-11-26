@@ -513,6 +513,18 @@ function initDress() {
   $('#desc').textContent = it.d || 'Vieni a provarlo in atelier: ti racconteremo tessuti, dettagli e possibilità di personalizzazione della sartoria interna.';
   $('#book').href = `prenota.html?abito=${encodeURIComponent(`${it.n} (${it.b})`)}`;
   $('#try').href = `prova-virtuale.html?id=${encodeURIComponent(it.id)}`;
+  // messaggio già scritto per WhatsApp e per email, con il nome dell'abito
+  const page = location.href.split('#')[0];
+  const msg = `Buongiorno, vorrei ricevere più informazioni sull'abito ${it.n} di ${it.b}: disponibilità, taglie e prezzo. Ecco la scheda: ${page}`;
+  $('#ask-wa').href = `https://wa.me/393248790033?text=${encodeURIComponent(msg)}`;
+  $('#ask-mail').href = `mailto:info@sposamiatelier.com?subject=${encodeURIComponent(`Informazioni sull'abito ${it.n} (${it.b})`)}&body=${encodeURIComponent(`${msg}\n\nGrazie!`)}`;
+  const askBtn = $('.ask__btn'), askMenu = $('#ask-menu');
+  askBtn.addEventListener('click', () => {
+    const open = askMenu.hidden;
+    askMenu.hidden = !open;
+    askBtn.setAttribute('aria-expanded', String(open));
+    if (open && !reduce) gsap.from($$('.ask__opt', askMenu), { opacity: 0, y: -10, duration: 0.6, ease: 'expo.out', stagger: 0.07 });
+  });
   const rel = CATALOG.filter((i) => i.b === it.b && i.id !== it.id && i.c === it.c).slice(0, 4);
   $('#related').innerHTML = rel.map(cardHTML).join('');
   $('#related-title').textContent = rel.length ? `Altri abiti ${it.b}` : '';
@@ -663,7 +675,12 @@ function initTryOn() {
   });
   draw('Tutti');
   const p = CATALOG.find((i) => i.id === pre);
-  if (p) choose(p);
+  if (p) {
+    choose(p);
+    // arrivando dalla scheda di un abito si va dritti allo strumento, con l'abito già scelto
+    const tool = pick.closest('section') || pick;
+    setTimeout(() => (lenis ? lenis.scrollTo(tool, { offset: -90 }) : tool.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' })), 700);
+  }
 }
 
 /* =========================================================

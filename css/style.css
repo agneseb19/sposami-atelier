@@ -138,7 +138,7 @@ main { display: block; }
 /* =========================================================
    HOME — il nome sotto la foto
    ========================================================= */
-.hero { height: 100svh; min-height: 640px; display: flex; flex-direction: column; padding: var(--bar) var(--m) 0; }
+.hero { height: 100lvh; min-height: 640px; display: flex; flex-direction: column; padding: var(--bar) var(--m) 0; }
 .hero__photo { position: relative; flex: 0 0 56%; border-radius: var(--r); overflow: hidden; background: var(--surface); }
 .hero__photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 42% 38%; transform-origin: 50% 40%; }
 .hero__strip { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; padding: 18px 0 24px; }
@@ -537,7 +537,7 @@ main { display: block; }
 .phead__text { display: grid; gap: 1.6rem; align-content: center; }
 .phead__text h1 { max-width: 14ch; }
 .phead__side { max-width: 36rem; }
-.phead__pic { aspect-ratio: 4 / 5; max-height: calc(100svh - var(--bar) - 3rem); border-radius: var(--r); overflow: hidden; position: relative; justify-self: end; width: 100%; }
+.phead__pic { aspect-ratio: 4 / 5; max-height: calc(100lvh - var(--bar) - 3rem); border-radius: var(--r); overflow: hidden; position: relative; justify-self: end; width: 100%; }
 .phead__pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 @media (max-width: 860px) { .phead--pic { grid-template-columns: 1fr; } .phead__pic { aspect-ratio: 4 / 3; max-height: none; } }
 
@@ -636,7 +636,7 @@ h1, h2, h3, .head, .sub-head, .quiz__q, .card__name, .brandrows .nm, .rv__num, .
 .lm__word { color: inherit; }
 
 /* ---------- Hero a fotogrammi ---------- */
-.vhero { position: relative; height: 100svh; padding-top: var(--bar); }
+.vhero { position: relative; height: 100lvh; padding-top: var(--bar); }
 .vhero__stage { position: relative; height: 100%; overflow: hidden; background: #2a201c; }
 .vhero__canvas, .vhero__still { position: absolute; inset: 0; width: 100%; height: 100%; }
 .vhero__still { object-fit: cover; object-position: 50% 45%; }
@@ -852,7 +852,7 @@ h1, h2, h3, .head, .sub-head, .quiz__q, .card__name, .brandrows .nm, .rv__num, .
 
 
 /* v13: hero 3D */
-.h3d { --h3d-bg: #F4F3F1; position: relative; height: 100svh; min-height: 640px; padding-top: var(--bar); background: var(--h3d-bg); color: var(--ink); overflow: hidden; }
+.h3d { --h3d-bg: #F4F3F1; position: relative; height: 100lvh; min-height: 640px; padding-top: var(--bar); background: var(--h3d-bg); color: var(--ink); overflow: hidden; }
 .h3d--dark { --h3d-bg: #141414; color: #fff; }
 .h3d__cv { position: absolute; left: 0; right: 0; bottom: 0; top: var(--bar); width: 100%; height: calc(100% - var(--bar)); display: block; touch-action: pan-y; }
 .h3d::after { content: ""; position: absolute; inset: var(--bar) 0 0 0; pointer-events: none; background: linear-gradient(to right, var(--h3d-bg) 0%, color-mix(in srgb, var(--h3d-bg) 75%, transparent) 30%, transparent 55%); }
@@ -896,8 +896,8 @@ h1, h2, h3, .head, .sub-head, .quiz__q, .card__name, .brandrows .nm, .rv__num, .
 
 
 /* v20: cerimonia, la passerella */
-.rw { position: relative; height: calc(100svh + (var(--n) - 1) * 55svh); background: #fff; }
-.rw__pin { position: sticky; top: 0; height: 100svh; padding: calc(var(--bar) + 12px) var(--m) var(--m); display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.7fr); gap: clamp(1.5rem, 3vw, 3rem); }
+.rw { position: relative; height: calc(100lvh + (var(--n) - 1) * 55svh); background: #fff; }
+.rw__pin { position: sticky; top: 0; height: 100lvh; padding: calc(var(--bar) + 12px) var(--m) var(--m); display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.7fr); gap: clamp(1.5rem, 3vw, 3rem); }
 .rw__copy { align-self: end; display: grid; gap: 1.3rem; padding-bottom: .5rem; }
 .rw__title { font-size: clamp(2.6rem, 1rem + 4vw, 5rem); font-weight: 500; letter-spacing: -0.035em; line-height: 1.02; margin: 0; }
 .rw__body { display: grid; gap: 1rem; justify-items: start; }
@@ -927,11 +927,11 @@ h1, h2, h3, .head, .sub-head, .quiz__q, .card__name, .brandrows .nm, .rv__num, .
   .rw__info { right: 1rem; bottom: 1rem; }
   .rw__hint { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .rw { height: auto; } .rw__pin { position: relative; min-height: 100svh; } }
+@media (prefers-reduced-motion: reduce) { .rw { height: auto; } .rw__pin { position: relative; min-height: 100lvh; } }
 .rw__info { bottom: clamp(5.5rem, 9vh, 6.5rem); }
 
 /* v21: brand, la fila (ispirata a STANDBY) */
-.bq { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.5fr) minmax(0, .62fr); gap: clamp(1rem, 2vw, 2rem); height: 100svh; min-height: 680px; padding: calc(var(--bar) + 12px) var(--m) var(--m); background: #fff; }
+.bq { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.5fr) minmax(0, .62fr); gap: clamp(1rem, 2vw, 2rem); height: 100lvh; min-height: 680px; padding: calc(var(--bar) + 12px) var(--m) var(--m); background: #fff; }
 .bq__info { display: flex; flex-direction: column; justify-content: space-between; gap: 1.5rem; min-width: 0; padding-top: 1rem; }
 .bq__title { font-size: clamp(2rem, 1rem + 2.2vw, 3.2rem); font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; margin: 0; }
 .bq__intro { display: grid; gap: .5rem; margin-top: .9rem; max-width: 30rem; }
@@ -991,7 +991,7 @@ h1, h2, h3, .head, .sub-head, .quiz__q, .card__name, .brandrows .nm, .rv__num, .
 
 /* v22: sposa, la parola dietro alla sposa */
 .dp { position: relative; height: 190svh; background: #EFE7DD; }
-.dp__pin { position: sticky; top: 0; height: 100svh; overflow: hidden; }
+.dp__pin { position: sticky; top: 0; height: 100lvh; overflow: hidden; }
 .dp__bg, .dp__fg { position: absolute; left: 0; right: 0; bottom: 0; top: var(--bar); will-change: transform; }
 .dp__bg img, .dp__fg img { width: 100%; height: 100%; object-fit: cover; object-position: 62% 20%; display: block; }
 .dp__bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(20,14,10,.5), rgba(20,14,10,0) 45%); } /* taste-skill-ignore: scrim */
@@ -1025,3 +1025,7 @@ h1, h2, h3, .head, .sub-head, .quiz__q, .card__name, .brandrows .nm, .rv__num, .
 .rw__info { top: clamp(2.6rem, 4.5vw, 3.6rem); bottom: auto; }
 .bq__tag { box-sizing: border-box; }
 .bq__rail { padding: 2px 8px 2px 2px; }
+
+/* v23: niente sbordo orizzontale su telefono (Safari rimpiccioliva la pagina) */
+html { overflow-x: clip; }
+.cflow { overflow-x: clip; }

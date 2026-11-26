@@ -1,0 +1,9 @@
+.DS_Store
+.taste-skill/
+_raw/
+assets/hero/_tmp/
+assets/hero/hero-video.mp4
+assets/hero/hero-fine.png
+assets/prova/*.png
+proposte-font.html
+js/fluid-reveal.js

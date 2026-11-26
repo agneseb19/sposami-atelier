@@ -1,0 +1,1106 @@
+/* ---------------------------------------------------------
+   Sposami Atelier — script condiviso da tutte le pagine
+   --------------------------------------------------------- */
+const { gsap, ScrollTrigger } = window;
+gsap.registerPlugin(ScrollTrigger);
+window.__siteReady = true;
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const root = document.documentElement;
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (reduce) root.classList.add('reduced');
+
+const PAGE = document.body.dataset.page;
+const CATALOG = window.CATALOG || [];
+const MEDIA = 'https://static.wixstatic.com/media/';
+const img = (id, w, h) => `${MEDIA}${id}/v1/fill/w_${w},h_${h},al_c,q_82,enc_auto/${id.split('~')[0].split('.')[0]}.jpg`;
+const esc = (s = '') => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ARR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M0 5h12M8.5 1 12.5 5 8.5 9" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+
+/* ---------- Brand ---------- */
+const BRANDS = [
+  { k: 'milla-nova', n: 'Milla Nova', g: 'donna', tile: 'e81dc4_c5f32bc00cbf4a85864bb5e5a9905a31~mv2.jpg', d: "Brand internazionale di lusso, apprezzato per le sue creazioni glamour e d'impatto. Milla Nova propone abiti che uniscono silhouette moderne, tessuti pregiati e dettagli couture, perfetti per le spose che desiderano distinguersi." },
+  { k: 'evie-young', n: 'Evie Young', g: 'donna', tile: 'e81dc4_c71c99b9529f47f3b50264f576eea3af~mv2.webp', d: 'Marchio australiano dedicato alle spose moderne che cercano stile, comfort e personalità. Le collezioni Evie Young reinterpretano le tendenze contemporanee con linee pulite, dettagli ricercati e vestibilità inclusive.' },
+  { k: 'rosa-clara', n: 'Rosa Clarà', g: 'donna', tile: 'e81dc4_efb33a3c10d945eeb04215ec94d5fb95~mv2.jpeg', d: 'Uno dei marchi più prestigiosi del panorama bridal internazionale. Rosa Clarà è sinonimo di eleganza senza tempo, design innovativo e qualità sartoriale, con collezioni che esaltano raffinatezza e femminilità.' },
+  { k: 'adriana-alier', n: 'Adriana Alier', g: 'donna', tile: 'e81dc4_1e0ffcdbbe534d1ab62b55b157a946dd~mv2.jpeg', d: 'Brand spagnolo che propone abiti romantici e contemporanei, caratterizzati da linee leggere, tessuti delicati e dettagli raffinati. Ideale per le spose che desiderano uno stile elegante e naturale.' },
+  { k: 'pronovias', n: 'Pronovias', g: 'donna', tile: 'e81dc4_d59f1ab1265e4caba25c3304c453cb90~mv2.webp', d: "Icona mondiale dell'alta moda sposa, Pronovias realizza abiti che combinano innovazione, artigianalità e design esclusivo. Le sue collezioni spaziano dal classico al contemporaneo, soddisfacendo ogni stile di sposa." },
+  { k: 'st-patrick', n: 'St Patrick', g: 'donna', tile: 'e81dc4_ecf4a136302e4c3dbe1807704399dd14~mv2.webp', d: "Marchio del gruppo Pronovias che offre abiti raffinati e versatili. Le collezioni St Patrick si distinguono per l'equilibrio tra tradizione, eleganza e tendenze moderne, con modelli pensati per valorizzare ogni silhouette." },
+  { k: 'diamond-couture', n: 'Diamond Couture', g: 'donna', tile: 'e81dc4_67a8a7755c1642b8bc7ee19df6a31d91~mv2.jpg', d: 'Brand dedicato alle spose che desiderano un look esclusivo e ricercato. Gli abiti Diamond Couture si caratterizzano per dettagli luminosi, lavorazioni sartoriali e uno stile sofisticato che unisce glamour ed eleganza.' },
+  { k: 'altri-brand', n: 'Altri brand', g: 'donna', tile: 'e81dc4_3fafadd7807f4ba3bacf14a42ec86782~mv2.jpg', d: "L'atelier seleziona inoltre numerosi marchi nazionali e internazionali per offrire una proposta ampia e diversificata, capace di soddisfare ogni gusto, stile ed esigenza." },
+  { k: 'nicole', n: 'Nicole', g: 'donna', tile: 'e81dc4_d0931347fb49462cb8e983bb1aabcc6f~mv2.jpg', d: 'Marchio italiano simbolo di romanticismo ed eleganza contemporanea. Nicole realizza collezioni raffinate, impreziosite da ricami, pizzi e dettagli sartoriali che valorizzano la personalità di ogni sposa.' },
+  { k: 'natali-styran', n: 'Natali Styran', g: 'donna', tile: 'e81dc4_b7f9f35da8cc4436bb241f914da20a80~mv2.webp', d: 'Brand di alta gamma conosciuto per il suo stile sofisticato e contemporaneo. Le collezioni Natali Styran combinano design innovativo, materiali esclusivi e dettagli couture per creare abiti unici.' },
+  { k: 'musani', n: 'Musani', g: 'donna', tile: 'e81dc4_3b69e082cf53498b8a18b3595bd325f8~mv2.webp', d: 'Storico marchio italiano che interpreta la sposa con eleganza, romanticismo e cura sartoriale. Gli abiti Musani uniscono tradizione, qualità dei tessuti e design raffinato.' },
+  { k: 'anna-bella', n: 'Anna Bella', g: 'donna', tile: '268ca4_56ead1b4fce141219886ecaff636ca06~mv2.jpg', d: "Tra i marchi selezionati dall'atelier: chiedi i modelli disponibili durante la prova." },
+  { k: 'anna-sposa', n: 'Anna Sposa', g: 'donna', d: "Tra i marchi selezionati dall'atelier: chiedi i modelli disponibili durante la prova." },
+  { k: 'alberto-palatchi', n: 'Alberto Palatchi', g: 'donna', tile: 'e81dc4_a5e6715b78f24e5d9d9b8b8a00a600b9~mv2.webp', d: "Alberto Palatchi è un brand di abiti da sposa che unisce l'eleganza della tradizione sartoriale spagnola a uno stile contemporaneo e raffinato. Le sue collezioni si distinguono per linee pulite, tessuti pregiati e dettagli ricercati, pensati per valorizzare la femminilità con classe e modernità." },
+  { k: 'angelo-toma', n: 'Angelo Toma', g: 'uomo', tile: 'e81dc4_f8920630d4cc429b9a5991a9a88dfbbf~mv2.jpg', d: "Brand italiano che interpreta l'eleganza classica con uno stile raffinato e senza tempo. Le collezioni Angelo Toma si distinguono per la qualità sartoriale, i tessuti pregiati e i dettagli ricercati, pensati per valorizzare ogni sposa." },
+  { k: 'petrelli', n: 'Petrelli', g: 'uomo', tile: 'e81dc4_5190f6a2e7574e22bbbd125e5a541166~mv2.jpeg', d: 'Storica maison italiana specializzata in abiti da cerimonia e da sposa. Petrelli unisce tradizione artigianale e gusto contemporaneo, proponendo creazioni eleganti, curate nei minimi dettagli e realizzate con materiali di alta qualità.' },
+  { k: 'scribano', n: 'Scribano', g: 'uomo', tile: 'e81dc4_c16627c08aea4d70bd4de957cb1b0f07~mv2.png', d: 'Marchio italiano che celebra la femminilità attraverso abiti sofisticati e ricchi di personalità. Le collezioni Scribano fondono lavorazioni sartoriali, ricami preziosi e linee moderne per uno stile esclusivo.' },
+  { k: 'rocchini', n: 'Rocchini', g: 'uomo', tile: 'e81dc4_3a2dddadfdd14fc395329b333fa34f3a~mv2.jpg', d: "Maison italiana che propone abiti da sposa caratterizzati da eleganza classica e lavorazioni artigianali. Ogni creazione è studiata per offrire raffinatezza, qualità e una vestibilità impeccabile." },
+];
+const brandByName = (n) => BRANDS.find((b) => b.n === n);
+
+/* =========================================================
+   SCROLL MORBIDO
+   ========================================================= */
+let lenis = null;
+if (!reduce && window.Lenis) {
+  lenis = new window.Lenis({ lerp: 0.1 });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add((t) => lenis.raf(t * 1000));
+  gsap.ticker.lagSmoothing(0);
+}
+
+/* =========================================================
+   NAVIGAZIONE
+   ========================================================= */
+const wa = $('.wa');
+window.addEventListener('scroll', () => wa?.classList.toggle('is-on', window.scrollY > 600), { passive: true });
+
+const menuBtn = $('.bar__menu');
+const sheet = $('#sheet');
+let sheetOpen = false;
+function setSheet(open) {
+  sheetOpen = open;
+  menuBtn.setAttribute('aria-expanded', String(open));
+  menuBtn.textContent = open ? 'Chiudi' : 'Menu';
+  if (open) {
+    lenis?.stop();
+    sheet.hidden = false;
+    gsap.set(sheet, { visibility: 'visible' });
+    gsap.to(sheet, { opacity: 1, duration: reduce ? 0 : 0.35 });
+    if (!reduce) gsap.fromTo($$('.sheet__links a'), { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, stagger: 0.05, ease: 'expo.out' });
+    $('.sheet__links a').focus({ preventScroll: true });
+  } else {
+    lenis?.start();
+    gsap.to(sheet, { opacity: 0, duration: reduce ? 0 : 0.3, onComplete: () => { sheet.hidden = true; } });
+  }
+}
+menuBtn?.addEventListener('click', () => setSheet(!sheetOpen));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheetOpen) { setSheet(false); menuBtn.focus(); } });
+
+/* Transizione tra pagine: tendina bianca col cuore */
+const curtain = $('.curtain');
+function revealPage() {
+  if (!curtain) return;
+  curtain.style.animation = 'none';
+  if (reduce) { curtain.style.display = 'none'; return; }
+  gsap.timeline()
+    .fromTo($('.heart', curtain), { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(2)' })
+    .to($('.heart', curtain), { scale: 0.8, opacity: 0, duration: 0.25 }, '+=0.1')
+    .to(curtain, { opacity: 0, duration: 0.45, ease: 'power2.out' }, '-=0.1')
+    .set(curtain, { visibility: 'hidden' });
+}
+function leaveTo(href) {
+  if (reduce || !curtain) { location.href = href; return; }
+  gsap.set(curtain, { visibility: 'visible', opacity: 0 });
+  gsap.set($('.heart', curtain), { opacity: 0 });
+  gsap.to(curtain, { opacity: 1, duration: 0.35, ease: 'power2.in', onComplete: () => { location.href = href; } });
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href]');
+  if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank') return;
+  const url = new URL(a.href, location.href);
+  if (url.origin !== location.origin) return;
+  if (url.pathname === location.pathname && url.hash) {
+    const t = document.getElementById(url.hash.slice(1));
+    if (t) { e.preventDefault(); if (sheetOpen) setSheet(false); lenis ? lenis.scrollTo(t, { offset: -90 }) : t.scrollIntoView(); }
+    return;
+  }
+  e.preventDefault();
+  if (sheetOpen) setSheet(false);
+  leaveTo(url.href);
+});
+window.addEventListener('pageshow', (e) => { if (e.persisted && curtain) gsap.set(curtain, { visibility: 'hidden', opacity: 0 }); });
+
+/* =========================================================
+   MOVIMENTO COMUNE
+   ========================================================= */
+function initEntrances(scope = document) {
+  if (reduce) return;
+  // per ogni sezione: titolo, poi testo, poi immagine, sfalsati
+  const groups = new Map();
+  $$('[data-in]', scope).forEach((el) => {
+    if (el.dataset.inDone) return;
+    el.dataset.inDone = '1';
+    const sec = el.closest('section, footer, .phead, .grid') || document.body;
+    if (!groups.has(sec)) groups.set(sec, []);
+    groups.get(sec).push(el);
+  });
+  groups.forEach((els) => {
+    ScrollTrigger.batch(els, {
+      start: 'top 96%', once: true,
+      onEnter: (batch) => gsap.to(batch, { opacity: 1, y: 0, duration: 0.8, ease: 'expo.out', stagger: 0.07, overwrite: true }),
+    });
+  });
+}
+
+function initParallax(scope = document) {
+  if (reduce) return;
+  $$('[data-par]', scope).forEach((im) => {
+    gsap.fromTo(im, { yPercent: -6 }, {
+      yPercent: 6, ease: 'none',
+      scrollTrigger: { trigger: im.parentElement, start: 'top bottom', end: 'bottom top', scrub: true },
+    });
+  });
+}
+
+/* Il nome come monumento: pesa con lo scroll */
+function initWordmarks() {
+  if (reduce) return;
+  const foot = $('.foot__name');
+  if (foot) {
+    gsap.fromTo(foot, { scale: 0.92 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: '.foot', start: 'top bottom', end: 'bottom bottom', scrub: true } });
+  }
+}
+
+/* Anteprima che segue il cursore */
+function initPeek(scope) {
+  if (!scope || reduce || !window.matchMedia('(hover: hover) and (min-width: 861px)').matches) return;
+  const peek = document.createElement('div');
+  peek.className = 'peek';
+  peek.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(peek);
+  gsap.set(peek, { xPercent: -50, yPercent: -50 });
+  const xTo = gsap.quickTo(peek, 'x', { duration: 0.7, ease: 'power3' });
+  const yTo = gsap.quickTo(peek, 'y', { duration: 0.7, ease: 'power3' });
+  scope.addEventListener('pointermove', (e) => { xTo(e.clientX + 120); yTo(e.clientY); });
+  $$('[data-peek]', scope).forEach((a) => {
+    a.addEventListener('pointerenter', () => {
+      const im = document.createElement('img');
+      im.src = a.dataset.peek; im.alt = '';
+      peek.appendChild(im);
+      gsap.fromTo(im, { opacity: 0, scale: 1.1 }, { opacity: 1, scale: 1, duration: 0.6, ease: 'expo.out' });
+      while (peek.children.length > 3) peek.firstChild.remove();
+      gsap.to(peek, { autoAlpha: 1, duration: 0.3, overwrite: 'auto' });
+    });
+    a.addEventListener('pointerleave', () => gsap.to(peek, { autoAlpha: 0, duration: 0.3, overwrite: 'auto' }));
+  });
+}
+
+/* =========================================================
+   HOME
+   ========================================================= */
+const DETAILS = [
+  { l: 'Pizzo', k: ['pizzo'] }, { l: 'Maniche', k: ['manic'] }, { l: 'Schiena scoperta', k: ['schiena'] },
+  { l: 'Strascico', k: ['strascico', 'coda'] }, { l: 'Mikado', k: ['mikado'] }, { l: 'Tulle', k: ['tull'] },
+];
+const GROOM = [
+  { l: 'Smoking', test: (i) => /smoking/i.test(i.s) }, { l: 'Tight e mezzo tight', test: (i) => /tight/i.test(i.s) },
+  { l: 'Collo coreano', test: (i) => /coreano/i.test(i.s) }, { l: 'Doppiopetto', test: (i) => /doppio/i.test(`${i.s} ${i.n} ${i.d}`) },
+];
+
+/* Trova il tuo abito: tre domande, abiti veri */
+function initQuiz() {
+  const stage = $('.quiz__stage');
+  if (!stage) return;
+  const back = $('[data-q="back"]');
+  const bar = $('.quiz__bar i');
+  const count = $('#quiz-count');
+  const frame = $('.quiz__pic');
+  const sil = $('#quiz-sil');
+  const ans = { cat: null, a2: null, a3: null };
+  let step = 0;
+  let shownId = null;
+
+  const pool = () => CATALOG.filter((i) => {
+    if (!i.img.length) return false;
+    if (ans.cat && i.c !== ans.cat) return false;
+    if (ans.a2 && ans.a2 !== 'any') {
+      if (ans.cat === 'sposo') { const g = GROOM.find((x) => x.l === ans.a2); if (g && !g.test(i)) return false; }
+      else if (i.s !== ans.a2) return false;
+    }
+    if (ans.a3 && ans.a3 !== 'any') {
+      if (ans.cat === 'sposo') { if (i.b !== ans.a3) return false; }
+      else {
+        const d = DETAILS.find((x) => x.l === ans.a3);
+        const t = `${i.d} ${i.n}`.toLowerCase();
+        if (d && !d.k.some((k) => t.includes(k))) return false;
+      }
+    }
+    return true;
+  });
+
+  // la foto a destra mostra un abito vero che corrisponde alle scelte
+  function setPic(list) {
+    count.textContent = list.length;
+    const it = list[0];
+    if (!it || it.id === shownId) return;
+    shownId = it.id;
+    const next = document.createElement('img');
+    next.src = img(it.img[0], 800, 1000);
+    next.alt = '';
+    next.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover';
+    frame.appendChild(next);
+    const prune = () => { while (frame.children.length > 1) frame.firstElementChild.replaceWith(); };
+    if (reduce) { prune(); return; }
+    gsap.fromTo(next, { clipPath: 'inset(100% 0 0 0)', scale: 1.12 }, { clipPath: 'inset(0% 0 0 0)', scale: 1, duration: 0.9, ease: 'expo.out', onComplete: prune });
+  }
+  const silIcon = (name) => { const t = sil.content.querySelector(`[data-sil="${name}"]`); return t ? t.outerHTML : ''; };
+
+  function question() {
+    if (step === 0) return { q: 'Per quale occasione cerchi l’abito?', key: 'cat', opts: [['sposa', 'Sposa'], ['sposo', 'Sposo'], ['cerimonia', 'Cerimonia']] };
+    if (step === 1) {
+      if (ans.cat === 'sposo') return { q: 'Che stile preferisci?', key: 'a2', opts: [...GROOM.map((g) => [g.l, g.l]), ['any', 'Non lo so ancora']] };
+      const styles = ans.cat === 'cerimonia' ? ['Sirena', 'Scivolato', 'Principessa'] : ['Principessa', 'Sirena', 'Scivolato', 'A line'];
+      return { q: 'Quale silhouette ti somiglia di più?', key: 'a2', sil: true, opts: [...styles.map((x) => [x, x]), ['any', 'Non lo so ancora']] };
+    }
+    if (ans.cat === 'sposo') return { q: 'Hai un brand preferito?', key: 'a3', opts: [['Angelo Toma', 'Angelo Toma'], ['Petrelli', 'Petrelli'], ['Scribano', 'Scribano'], ['Rocchini', 'Rocchini'], ['any', 'Indifferente']] };
+    return { q: 'Un dettaglio a cui non rinunci?', key: 'a3', opts: [...DETAILS.map((d) => [d.l, d.l]), ['any', 'Nessuno in particolare']] };
+  }
+
+  function render(dir = 1) {
+    const Q = question();
+    stage.innerHTML = `<p class="quiz__q">${Q.q}</p><div class="quiz__opts${Q.sil ? ' quiz__opts--sil' : ''}">${Q.opts.map(([v, l]) =>
+      `<button type="button" class="quiz__opt" data-v="${esc(v)}" aria-pressed="${ans[Q.key] === v}">${Q.sil && v !== 'any' ? silIcon(v) : ''}<span>${esc(l)}</span></button>`).join('')}</div>`;
+    back.hidden = step === 0;
+    bar.style.width = `${(step / 3) * 100}%`;
+    if (!reduce) gsap.fromTo(stage.children, { opacity: 0, x: 24 * dir }, { opacity: 1, x: 0, duration: 0.6, ease: 'expo.out', stagger: 0.05 });
+    setPic(pool());
+  }
+
+  function results() {
+    bar.style.width = '100%';
+    let list = pool();
+    if (!list.length) { ans.a3 = null; list = pool(); }
+    const box = $('.quiz__results');
+    box.hidden = false;
+    $('#quiz-grid').innerHTML = list.slice(0, 4).map(cardHTML).join('');
+    const page = { sposa: 'sposa.html', sposo: 'sposo.html', cerimonia: 'cerimonia.html' }[ans.cat];
+    const qs = new URLSearchParams();
+    if (ans.a2 && ans.a2 !== 'any' && ans.cat !== 'sposo') qs.set('stile', ans.a2);
+    if (ans.a3 && ans.a3 !== 'any') qs.set(ans.cat === 'sposo' ? 'brand' : 'dettaglio', ans.a3);
+    $('#quiz-all').href = `${page}${qs.toString() ? `?${qs}` : ''}#catalogo`;
+    $('#quiz-all').textContent = `Vedi tutti i ${list.length} abiti`;
+    $('#quiz-book').href = `prenota.html?abito=${encodeURIComponent(list.slice(0, 4).map((i) => `${i.n} (${i.b})`).join(', '))}`;
+    stage.innerHTML = `<p class="quiz__q">Ecco gli abiti che fanno per te</p><p class="muted">Li trovi qui sotto: scegli quelli da provare in atelier, gratis e senza impegno.</p><button type="button" class="btn btn--soft btn--sm" data-q="restart" style="margin-top:1.2rem">Ricomincia</button>`;
+    back.hidden = true;
+    if (!reduce) animateIn($$('#quiz-grid .card'));
+    ScrollTrigger.refresh();
+    if (lenis) lenis.scrollTo(box, { offset: -120 }); else box.scrollIntoView();
+  }
+
+  stage.addEventListener('click', (e) => {
+    if (e.target.closest('[data-q="restart"]')) {
+      ans.cat = ans.a2 = ans.a3 = null; step = 0; $('.quiz__results').hidden = true; render(-1); return;
+    }
+    const b = e.target.closest('.quiz__opt');
+    if (!b) return;
+    const Q = question();
+    ans[Q.key] = b.dataset.v;
+    if (Q.key === 'cat') { ans.a2 = null; ans.a3 = null; }
+    $$('.quiz__opt', stage).forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    setPic(pool());
+    setTimeout(() => { if (step < 2) { step += 1; render(1); } else results(); }, reduce ? 0 : 260);
+  });
+  back.addEventListener('click', () => { if (step > 0) { step -= 1; render(-1); } });
+  render();
+}
+
+/* Recensioni: una alla volta, con frecce, pallini e avanzamento automatico */
+function initReviews() {
+  $$('.rv__box').forEach((box) => {
+    const slides = $$('.rv__slide', box);
+    const dots = $$('.rv__dot', box);
+    let at = 0;
+    let timer = 0;
+    const go = (n) => {
+      at = (n + slides.length) % slides.length;
+      slides.forEach((sl, k) => { sl.classList.toggle('is-on', k === at); sl.setAttribute('aria-hidden', String(k !== at)); });
+      dots.forEach((d, k) => d.setAttribute('aria-current', String(k === at)));
+      clearInterval(timer);
+      if (!reduce) timer = setInterval(() => go(at + 1), 8000);
+    };
+    $$('.rv__btn', box).forEach((b) => b.addEventListener('click', () => go(at + Number(b.dataset.dir))));
+    dots.forEach((d, k) => d.addEventListener('click', () => go(k)));
+    box.addEventListener('pointerenter', () => clearInterval(timer));
+    box.addEventListener('pointerleave', () => go(at));
+    go(0);
+  });
+}
+
+/* Nastro dei loghi: il contenuto si ripete per scorrere senza stacchi */
+function initMarquee() {
+  $$('.marquee__track').forEach((t) => {
+    const copy = [...t.children].map((li) => { const c = li.cloneNode(true); c.setAttribute('aria-hidden', 'true'); return c; });
+    copy.forEach((c) => t.appendChild(c));
+  });
+}
+
+/* =========================================================
+   HERO: fotogrammi legati allo scroll
+   dal mezzo busto (frame_001) all'abito intero (frame_140)
+   ========================================================= */
+function initFrameHero() {
+  const section = $('.vhero');
+  if (!section) return;
+  const canvas = $('.vhero__canvas', section);
+  if (reduce || !canvas.getContext) return; // con "riduci movimento" resta l'immagine finale
+  const ctx = canvas.getContext('2d');
+  const N = 140;
+  const small = window.matchMedia('(max-width: 760px), (orientation: portrait) and (max-width: 1024px)').matches;
+  const dir = small ? 'assets/hero/frames-mobile' : 'assets/hero/frames';
+  const src = (i) => `${dir}/frame_${String(i + 1).padStart(3, '0')}.webp`;
+  const imgs = new Array(N);
+  let current = 0;
+  let ready = false;
+
+  function size() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    canvas.width = Math.round(canvas.clientWidth * dpr);
+    canvas.height = Math.round(canvas.clientHeight * dpr);
+    draw(current);
+  }
+  // il fotogramma più vicino già caricato, per non mostrare mai il vuoto
+  function nearest(i) {
+    for (let d = 0; d < N; d++) {
+      if (imgs[i - d] && imgs[i - d].complete && imgs[i - d].naturalWidth) return imgs[i - d];
+      if (imgs[i + d] && imgs[i + d].complete && imgs[i + d].naturalWidth) return imgs[i + d];
+    }
+    return null;
+  }
+  function draw(i) {
+    const im = nearest(i);
+    if (!im) return;
+    const cw = canvas.width, ch = canvas.height;
+    const sc = Math.max(cw / im.naturalWidth, ch / im.naturalHeight); // come object-fit: cover
+    const w = im.naturalWidth * sc, h = im.naturalHeight * sc;
+    ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
+  }
+  function load(i) {
+    return new Promise((res) => {
+      const im = new Image();
+      im.decoding = 'async';
+      im.onload = im.onerror = () => res(im);
+      im.src = src(i);
+      imgs[i] = im;
+    });
+  }
+  // prima il primo fotogramma, poi uno ogni 10, poi tutti gli altri
+  const order = [];
+  for (let i = 10; i < N; i += 10) order.push(i);
+  order.push(N - 1);
+  for (let i = 1; i < N; i++) if (!order.includes(i)) order.push(i);
+  load(0).then(() => {
+    ready = true;
+    section.classList.add('vhero--live');
+    size();
+    let k = 0;
+    const next = () => {
+      if (k >= order.length) return;
+      const i = order[k++];
+      load(i).then(() => { if (Math.abs(i - current) < 6) draw(current); next(); });
+    };
+    for (let c = 0; c < 6; c++) next();
+  });
+  window.addEventListener('resize', () => ready && size());
+
+  const state = { f: 0 };
+  const tl = gsap.timeline({
+    defaults: { ease: 'none' },
+    scrollTrigger: { trigger: section, start: 'top top', end: '+=260%', pin: true, scrub: 1, anticipatePin: 1 },
+  });
+  tl.to(state, { f: N - 1, duration: 1, onUpdate: () => { const i = Math.round(state.f); if (i !== current) { current = i; draw(i); } } }, 0)
+    .to('.vhero__hint', { opacity: 0, duration: 0.06 }, 0)
+    .to('.vhero__step--name', { opacity: 0, scale: 0.86, y: -30, duration: 0.14 }, 0.3)
+    .fromTo('.vhero__claim', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.12 }, 0.42)
+    .to('.vhero__claim', { opacity: 0, y: -24, duration: 0.1 }, 0.72)
+    .fromTo('.vhero__end', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.1 }, 0.84);
+  gsap.set(['.vhero__claim', '.vhero__end'], { opacity: 0 });
+  gsap.from('.vhero__step--name > *', { opacity: 0, y: 24, duration: 0.8, ease: 'expo.out', stagger: 0.1, delay: 0.1 });
+}
+
+function initHome() {
+  initQuiz();
+  initFrameHero();
+}
+
+/* =========================================================
+   CATALOGO
+   ========================================================= */
+function cardHTML(it) {
+  const a = it.img[0], b = it.img[1];
+  return `<a class="card" href="abito.html?id=${encodeURIComponent(it.id)}">
+    <div class="card__pic">
+      <img loading="lazy" src="${img(a, 600, 800)}" alt="${esc(it.n)}, ${esc(it.b)}" width="600" height="800">
+      ${b ? `<img loading="lazy" src="${img(b, 600, 800)}" alt="" width="600" height="800">` : ''}
+    </div>
+    <div class="card__meta">
+      <div><p class="card__name">${esc(it.n)}</p><p class="card__sub">${esc(it.b)}</p></div>
+      <span class="card__style">${esc(it.s)}</span>
+    </div>
+  </a>`;
+}
+
+function initCatalog() {
+  const cat = document.body.dataset.cat;
+  const grid = $('#grid');
+  const items = CATALOG.filter((i) => i.c === cat);
+  const params = new URLSearchParams(location.search);
+  const state = { style: new Set(), brand: '', sort: 'new', shown: 24, det: null, q: '' };
+  if (params.get('stile')) state.style.add(params.get('stile'));
+  if (params.get('brand')) state.brand = params.get('brand');
+  const det = DETAILS.find((d) => d.l === params.get('dettaglio'));
+
+  const count = (key, v) => items.filter((i) => i[key] === v).length;
+  const styles = [...new Set(items.map((i) => i.s))].sort();
+  const brands = [...new Set(items.map((i) => i.b))].sort();
+  state.det = det || null;
+  $('#f-style').innerHTML = (state.det ? `<button type="button" class="chip" data-det aria-pressed="true">${esc(state.det.l)} <svg class="n" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.5"/></svg><span class="sr">Rimuovi filtro</span></button>` : '') + styles.map((s) => `<button type="button" class="chip" data-v="${esc(s)}" aria-pressed="${state.style.has(s)}">${esc(s)}<span class="n">${count('s', s)}</span></button>`).join('');
+  $('#f-brand').innerHTML = `<label class="select"><span class="sr">Brand</span><select id="brand-sel"><option value="">Tutti i brand</option>${brands.map((b) => `<option value="${esc(b)}"${state.brand === b ? ' selected' : ''}>${esc(b)} (${count('b', b)})</option>`).join('')}</select></label>`;
+
+  const filtered = () => {
+    let l = items.filter((i) => (!state.style.size || state.style.has(i.s)) && (!state.brand || i.b === state.brand) && (!state.det || state.det.k.some((k) => (i.d + ' ' + i.n).toLowerCase().includes(k))) && (!state.q || `${i.n} ${i.b} ${i.s} ${i.d}`.toLowerCase().includes(state.q)));
+    if (state.sort === 'az') l = [...l].sort((a, b) => a.n.localeCompare(b.n, 'it'));
+    return l;
+  };
+  function render(append = false) {
+    const list = filtered();
+    const from = append ? grid.children.length : 0;
+    if (!append) grid.innerHTML = '';
+    grid.insertAdjacentHTML('beforeend', list.slice(from, state.shown).map(cardHTML).join(''));
+    animateIn([...grid.children].slice(from));
+    $('#count').textContent = `${list.length} ${list.length === 1 ? 'abito' : 'abiti'}`;
+    $('#empty').hidden = list.length > 0;
+    $('#more').hidden = state.shown >= list.length;
+    $('#more-txt').textContent = `${Math.min(state.shown, list.length)} di ${list.length} abiti`;
+    ScrollTrigger.refresh();
+  }
+  $('#f-style').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    if (b.hasAttribute('data-det')) { state.det = null; b.hidden = true; state.shown = 24; render(); return; }
+    const v = b.dataset.v;
+    state.style.has(v) ? state.style.delete(v) : state.style.add(v);
+    b.setAttribute('aria-pressed', String(state.style.has(v)));
+    state.shown = 24; render();
+  });
+  $('#brand-sel').addEventListener('change', (e) => { state.brand = e.target.value; state.shown = 24; render(); });
+  let qt = 0;
+  $('#search')?.addEventListener('input', (e) => { clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value.trim().toLowerCase(); state.shown = 24; render(); }, 180); });
+  $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; state.shown = 24; render(); });
+  $('#more-btn').addEventListener('click', () => { state.shown += 24; render(true); });
+  $('#reset').addEventListener('click', () => {
+    state.style.clear(); state.brand = ''; state.det = null; $('#brand-sel').value = ''; if ($('[data-det]')) $('[data-det]').hidden = true;
+    $$('#f-style .chip').forEach((c) => c.setAttribute('aria-pressed', 'false'));
+    render();
+  });
+  render();
+}
+
+/* =========================================================
+   SCHEDA ABITO
+   ========================================================= */
+function initDress() {
+  const id = new URLSearchParams(location.search).get('id');
+  const it = CATALOG.find((i) => i.id === id) || CATALOG[0];
+  document.title = `${it.n}, ${it.b} | Sposami Atelier`;
+  const brand = brandByName(it.b);
+  const catPage = { sposa: 'sposa.html', sposo: 'sposo.html', cerimonia: 'cerimonia.html' }[it.c];
+  const catName = { sposa: 'Abiti da sposa', sposo: 'Abiti da sposo', cerimonia: 'Abiti da cerimonia' }[it.c];
+  $('#crumb').innerHTML = `<a href="index.html">Home</a><span>/</span><a href="${catPage}">${catName}</a>`;
+  $('#gallery').innerHTML = it.img.map((src, n) => `<div class="pic"><img src="${img(src, n === 0 ? 1200 : 700, n === 0 ? 1500 : 930)}" alt="${n === 0 ? esc(`${it.n}, ${it.b}`) : ''}"${n ? ' loading="lazy"' : ''}></div>`).join('');
+  $('#name').textContent = it.n;
+  $('#brand').innerHTML = brand ? `<a class="link" href="brand.html?b=${brand.k}">${esc(it.b)} ${ARR}</a>` : esc(it.b);
+  $('#facts').innerHTML = `<dt>Brand</dt><dd>${esc(it.b)}</dd><dt>Stile</dt><dd>${esc(it.s)}</dd><dt>Catalogo</dt><dd>${catName}</dd>`;
+  $('#desc').textContent = it.d || 'Vieni a provarlo in atelier: ti racconteremo tessuti, dettagli e possibilità di personalizzazione della sartoria interna.';
+  $('#book').href = `prenota.html?abito=${encodeURIComponent(`${it.n} (${it.b})`)}`;
+  $('#try').href = `prova-virtuale.html?id=${encodeURIComponent(it.id)}`;
+  const rel = CATALOG.filter((i) => i.b === it.b && i.id !== it.id && i.c === it.c).slice(0, 4);
+  $('#related').innerHTML = rel.map(cardHTML).join('');
+  $('#related-title').textContent = rel.length ? `Altri abiti ${it.b}` : '';
+  if (!reduce) {
+    gsap.from('#gallery .pic', { opacity: 0, y: 40, duration: 1.2, ease: 'expo.out', stagger: 0.08, delay: 0.3 });
+    gsap.from('.pdp__info > *', { opacity: 0, y: 24, duration: 1, ease: 'expo.out', stagger: 0.06, delay: 0.4 });
+  }
+}
+
+/* =========================================================
+   BRAND
+   ========================================================= */
+function initBrands() {
+  const key = new URLSearchParams(location.search).get('b');
+  const b = BRANDS.find((x) => x.k === key);
+  if (!b) {
+    const card = (x) => {
+      const n = CATALOG.filter((i) => i.b === x.n).length;
+      return `<a class="bcard" href="brand.html?b=${x.k}" data-in><div class="bcard__pic">${x.tile ? `<img src="${img(x.tile, 600, 750)}" alt="Abito ${esc(x.n)}" loading="lazy">` : `<span>${esc(x.n)}</span>`}</div><p class="bcard__name">${esc(x.n)}</p><p class="bcard__ct">${n ? `${n} abiti` : 'Modelli in atelier'}</p></a>`;
+    };
+    $('#b-donna').innerHTML = BRANDS.filter((x) => x.g === 'donna').map(card).join('');
+    $('#b-uomo').innerHTML = BRANDS.filter((x) => x.g === 'uomo').map(card).join('');
+    return;
+  }
+  $('#brand-index').hidden = true;
+  $('#brand-one').hidden = false;
+  document.title = `${b.n} | Brand | Sposami Atelier`;
+  $('#bname').textContent = b.n;
+  $('#bdesc').textContent = b.d;
+  const list = CATALOG.filter((i) => i.b === b.n);
+  $('#bcount').textContent = list.length ? `${list.length} abiti in atelier` : 'Modelli disponibili in atelier';
+  if (b.tile) { $('#bimg').src = img(b.tile, 1000, 1250); $('#bimg').alt = `Abito ${b.n}`; } else $('#bimg').closest('.split__pic').remove();
+  $('#bgrid').innerHTML = list.length ? list.map(cardHTML).join('') : '<p class="empty">Chiedi in atelier i modelli disponibili di questo brand.</p>';
+  if (!reduce) {
+    gsap.from('#brand-one .split__copy > *, #brand-one .split__pic', { opacity: 0, y: 30, duration: 1.1, ease: 'expo.out', stagger: 0.08, delay: 0.3 });
+    animateIn($$('#bgrid .card'));
+  }
+}
+
+/* =========================================================
+   PROVA VIRTUALE
+   ========================================================= */
+function initTryOn() {
+  const drop = $('#drop');
+  const file = $('#photo');
+  file.addEventListener('change', () => {
+    const f = file.files[0];
+    if (!f || !f.type.startsWith('image/')) return;
+    let im = $('img', drop);
+    if (!im) { im = document.createElement('img'); drop.appendChild(im); }
+    im.src = URL.createObjectURL(f); im.alt = 'La tua foto';
+    $('.drop__txt', drop).hidden = true;
+    if (!reduce) gsap.fromTo(im, { clipPath: 'inset(100% 0 0 0)' }, { clipPath: 'inset(0% 0 0 0)', duration: 1, ease: 'expo.out' });
+  });
+  ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, () => drop.classList.add('is-over')));
+  ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, () => drop.classList.remove('is-over')));
+
+  const list = CATALOG.filter((i) => i.c !== 'sposo' && i.img.length);
+  const pre = new URLSearchParams(location.search).get('id');
+  const brands = [...new Set(list.map((i) => i.b))];
+  const pick = $('#pick');
+  const chips = $('#pick-brands');
+  chips.innerHTML = ['Tutti', ...brands].map((b, n) => `<button type="button" class="chip" aria-pressed="${n === 0}" data-b="${esc(b)}">${esc(b)}</button>`).join('');
+  const choose = (it) => { $('#chosen').textContent = `${it.n}, ${it.b}`; };
+  function draw(brand) {
+    let l = brand === 'Tutti' ? list.slice(0, 60) : list.filter((i) => i.b === brand);
+    const p = CATALOG.find((i) => i.id === pre);
+    if (p && !l.includes(p) && brand === 'Tutti') l = [p, ...l];
+    pick.innerHTML = l.map((i) => `<button type="button" role="radio" aria-checked="${i.id === pre}" data-id="${esc(i.id)}" aria-label="${esc(`${i.n}, ${i.b}`)}"><img loading="lazy" src="${img(i.img[0], 240, 320)}" alt=""></button>`).join('');
+  }
+  chips.addEventListener('click', (e) => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    $$('.chip', chips).forEach((x) => x.setAttribute('aria-pressed', String(x === c)));
+    draw(c.dataset.b);
+  });
+  pick.addEventListener('click', (e) => {
+    const b = e.target.closest('[role="radio"]'); if (!b) return;
+    $$('[role="radio"]', pick).forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+    choose(CATALOG.find((i) => i.id === b.dataset.id));
+  });
+  draw('Tutti');
+  const p = CATALOG.find((i) => i.id === pre);
+  if (p) choose(p);
+}
+
+/* =========================================================
+   MODULI (dimostrativi)
+   ========================================================= */
+function initForms() {
+  const params = new URLSearchParams(location.search);
+  const d = $('#b-data');
+  if (d) d.min = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  if (params.get('abito') && $('#b-note')) $('#b-note').value = `Vorrei provare: ${params.get('abito')}`;
+  const s = params.get('settore');
+  if (s) { const r = $(`input[name="settore"][value="${s}"]`); if (r) r.checked = true; }
+
+  $$('form[data-demo]').forEach((form) => {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      $$('.form__err', form).forEach((n) => n.remove());
+      let first = null;
+      $$('[required]', form).forEach((f) => {
+        if (f.type === 'radio') return;
+        const bad = f.type === 'checkbox' ? !f.checked : !f.value.trim();
+        f.setAttribute('aria-invalid', String(bad));
+        if (!bad) { f.removeAttribute('aria-describedby'); return; }
+        const m = document.createElement('p');
+        m.className = 'form__err'; m.id = `${f.id}-err`;
+        m.textContent = f.type === 'checkbox' ? 'Serve il consenso per continuare.' : 'Compila questo campo per continuare.';
+        (f.closest('.check') || f).insertAdjacentElement('afterend', m);
+        f.setAttribute('aria-describedby', m.id);
+        first ??= f;
+      });
+      if (first) { first.focus(); return; }
+      const ok = $('.form__ok', form);
+      ok.classList.add('is-on'); ok.tabIndex = -1; ok.focus();
+      form.reset();
+      if (!reduce) gsap.fromTo(ok, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.7, ease: 'expo.out' });
+    });
+  });
+}
+
+/* =========================================================
+   MOTION v6
+   ========================================================= */
+const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+/* Testate in motion, una variante per pagina */
+/* Hero delle pagine: una scena 3D diversa per ogni pagina (js/hero3d.js) */
+function initHero3D() {
+  const el = $('.h3d');
+  if (!el) return;
+  const title = $('.h3d__title', el);
+  if (!reduce) {
+    title.setAttribute('aria-label', title.textContent.trim());
+    title.innerHTML = title.textContent.trim().split(/\s+/).map((w) => `<span class="w" aria-hidden="true"><span>${esc(w)}</span></span>`).join(' ');
+    gsap.from($$('.w > span', title), { yPercent: 110, duration: 1.2, ease: 'expo.out', stagger: 0.06, delay: 0.3 });
+    gsap.from($$('.h3d__body > *', el), { opacity: 0, y: 20, duration: 1, ease: 'expo.out', stagger: 0.08, delay: 0.6 });
+  }
+  import('./hero3d.js').then((m) => m.mount(el, { brands: BRANDS })).catch((err) => console.warn('Hero 3D non disponibile', err));
+}
+
+/* Hero d'immagine: sposa (maschera "sì"), cerimonia (lookbook orizzontale), brand (parete di colonne) */
+function initImageHero() {
+  const el = $('[data-ih]');
+  if (!el) return;
+  const v = el.dataset.ih;
+  if (v === 'depth') initDepth(el);
+  if (v === 'runway') initRunway(el);
+  if (v === 'queue') initQueue(el);
+}
+
+function splitTitle(title) {
+  title.setAttribute('aria-label', title.textContent.trim());
+  title.innerHTML = title.textContent.trim().split(/\s+/).map((w) => `<span class="w" aria-hidden="true"><span>${esc(w)}</span></span>`).join(' ');
+  return $$('.w > span', title);
+}
+
+/* Sposa: la parola gigante sta tra lo sfondo e la sposa scontornata; livelli in profondità col mouse e con lo scroll */
+function initDepth(el) {
+  const bg = $('.dp__bg', el), fg = $('.dp__fg', el), word = $('.dp__word', el);
+  if (reduce) return;
+  gsap.from($('span', word), { yPercent: 70, opacity: 0, duration: 1.6, ease: 'expo.out', delay: 0.25 });
+  gsap.from(fg, { yPercent: 3, opacity: 0, duration: 1.6, ease: 'expo.out', delay: 0.5 });
+  gsap.fromTo(bg, { scale: 1.14, filter: 'blur(12px)' }, { scale: 1, filter: 'blur(0px)', duration: 2.2, ease: 'expo.out', clearProps: 'filter' });
+  gsap.from($$('.dp__copy > *, .dp__body > *', el), { opacity: 0, y: 18, duration: 1, ease: 'expo.out', stagger: 0.08, delay: 0.9 });
+  if (fine) {
+    const layers = [[bg, 10], [word, 28], [fg, 42]].map(([t, k]) => [gsap.quickTo(t, 'x', { duration: 1.2, ease: 'power3' }), gsap.quickTo(t, 'y', { duration: 1.2, ease: 'power3' }), k]);
+    el.addEventListener('pointermove', (e) => {
+      const dx = e.clientX / innerWidth - 0.5, dy = e.clientY / innerHeight - 0.5;
+      layers.forEach(([qx, qy, k]) => { qx(-dx * k); qy(-dy * k * 0.6); });
+    });
+  }
+  const tl = gsap.timeline({ scrollTrigger: { trigger: el, start: 'top top', end: 'bottom bottom', scrub: 1 } });
+  tl.to($('img', bg), { scale: 1.12, ease: 'none', duration: 1 }, 0)
+    .to(word, { yPercent: -45, opacity: 0.15, ease: 'none', duration: 1 }, 0)
+    .fromTo($('img', fg), { scale: 1 }, { scale: 1.16, transformOrigin: '68% 100%', ease: 'none', duration: 1 }, 0)
+    .to($('.dp__copy', el), { opacity: 0, y: -30, ease: 'none', duration: 0.4 }, 0.6);
+}
+
+/* Cerimonia: passerella di abiti scontornati in fila verso il fondo (ispirata a ODALINE) */
+function initRunway(el) {
+  const stage = $('.rw__stage', el);
+  const figs = $$('.rw__fig', el);
+  const N = figs.length;
+  const count = $('.rw__count b', el);
+  const name = $('.rw__name span', el);
+  const link = $('.rw__link', el);
+  const bar = $('.rw__bar i', el);
+  const st = { f: 0 };
+  let current = 0;
+  const layout = () => {
+    const W = stage.clientWidth, H = stage.clientHeight, fh = H * 0.84;
+    figs.forEach((fig, i) => {
+      const d = i - st.f;
+      let x, s, y, blur, op, br;
+      if (d >= 0) {
+        x = 0.3 + 0.17 * d - 0.012 * d * d;
+        s = Math.pow(0.72, d);
+        y = 0.95 - 0.21 * (1 - s);
+        blur = Math.min(d * 2.4, 10);
+        op = d > 5.5 ? Math.max(0, 1 - (d - 5.5)) : 1;
+        br = 1 - Math.min(d, 5) * 0.05;
+      } else {
+        x = 0.3 + 0.55 * d;
+        s = 1 - d * 0.35;
+        y = 0.95 - d * 0.04;
+        blur = Math.min(-d * 8, 14);
+        op = Math.max(0, 1 + d * 1.6);
+        br = 1;
+      }
+      const fw = fh * parseFloat(fig.style.getPropertyValue('--ar'));
+      fig.style.width = `${fw}px`;
+      fig.style.height = `${fh}px`;
+      fig.style.transform = `translate3d(${x * W - fw / 2}px, ${y * H - fh}px, 0) scale(${s})`;
+      fig.style.filter = `blur(${blur.toFixed(2)}px) brightness(${br.toFixed(3)})`;
+      fig.style.opacity = op.toFixed(3);
+      fig.style.zIndex = String(100 - Math.round(d * 10));
+      fig.style.pointerEvents = op > 0.5 ? 'auto' : 'none';
+    });
+    bar.style.transform = `scaleX(${(st.f + 1) / N})`;
+    const k = Math.min(N - 1, Math.max(0, Math.round(st.f)));
+    if (k !== current) {
+      current = k;
+      count.textContent = String(k + 1).padStart(2, '0');
+      link.href = figs[k].dataset.href;
+      if (reduce) name.textContent = figs[k].dataset.name;
+      else gsap.to(name, { yPercent: -110, duration: 0.25, ease: 'power2.in', overwrite: true, onComplete: () => { name.textContent = figs[k].dataset.name; gsap.fromTo(name, { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: 'expo.out' }); } });
+    }
+  };
+  const clampF = (i) => Math.max(0, Math.min(N - 1, i));
+  const to = (f) => (reduce ? (st.f = f, layout()) : gsap.to(st, { f, duration: 0.7, ease: 'power3.out', overwrite: true, onUpdate: layout }));
+  let goTo = (i) => to(clampF(i));
+  layout();
+  window.addEventListener('resize', layout);
+  figs.forEach((fig, i) => fig.addEventListener('click', () => {
+    if (Math.abs(i - st.f) < 0.5) location.href = fig.dataset.href;
+    else goTo(i);
+  }));
+  if (reduce) return;
+
+  gsap.from(splitTitle($('.rw__title', el)), { yPercent: 110, duration: 1.2, ease: 'expo.out', stagger: 0.06, delay: 0.3 });
+  gsap.from($$('.rw__body > *, .rw__info > *, .rw__hint', el), { opacity: 0, y: 20, duration: 1, ease: 'expo.out', stagger: 0.06, delay: 0.6 });
+  gsap.from($$('.rw__fig img', el), { opacity: 0, yPercent: 6, duration: 1.4, ease: 'expo.out', stagger: 0.09, delay: 0.2 });
+
+  const mm = gsap.matchMedia();
+  mm.add('(min-width: 761px)', () => {
+    const per = () => (el.offsetHeight - innerHeight) / (N - 1);
+    const trig = ScrollTrigger.create({
+      trigger: el, start: 'top top', end: 'bottom bottom',
+      snap: { snapTo: 1 / (N - 1), duration: { min: 0.3, max: 0.8 }, delay: 0.08, ease: 'power2.inOut' },
+      onUpdate: (self) => to(self.progress * (N - 1)),
+    });
+    const jump = (y) => (lenis ? lenis.scrollTo(y, { immediate: true }) : window.scrollTo(0, y));
+    goTo = (i) => {
+      const y = trig.start + clampF(i) * per();
+      if (lenis) lenis.scrollTo(y, { duration: 1 }); else window.scrollTo({ top: y, behavior: 'smooth' });
+    };
+    let dragX = null;
+    stage.addEventListener('pointerdown', (e) => { dragX = e.clientX; stage.classList.add('is-drag'); });
+    window.addEventListener('pointermove', (e) => {
+      if (dragX === null) return;
+      const dx = e.clientX - dragX;
+      dragX = e.clientX;
+      jump(window.scrollY - (dx / (stage.clientWidth * 0.3)) * per());
+    });
+    window.addEventListener('pointerup', () => {
+      if (dragX === null) return;
+      dragX = null;
+      stage.classList.remove('is-drag');
+      goTo(Math.round(st.f));
+    });
+    return () => trig.kill();
+  });
+  mm.add('(max-width: 760px)', () => {
+    let sx = null, f0 = 0;
+    goTo = (i) => to(clampF(i));
+    stage.addEventListener('pointerdown', (e) => { sx = e.clientX; f0 = st.f; });
+    stage.addEventListener('pointermove', (e) => {
+      if (sx === null) return;
+      gsap.killTweensOf(st);
+      st.f = clampF(f0 - (e.clientX - sx) / (stage.clientWidth * 0.45));
+      layout();
+    });
+    const end = () => { if (sx === null) return; sx = null; goTo(Math.round(st.f)); };
+    stage.addEventListener('pointerup', end);
+    stage.addEventListener('pointercancel', end);
+  });
+}
+
+/* Foto del brand, oppure una copertina tipografica se il brand non ha foto */
+function typeOrPic(b, w, h, alt) {
+  return b.tile
+    ? `<img src="${img(b.tile, w, h)}" alt="${esc(alt)}" loading="lazy">`
+    : `<b class="type-tile"><i aria-hidden="true">♥</i>${esc(b.n)}</b>`;
+}
+
+/* Brand: la fila di abiti scontornati, uno per brand (ispirata a STANDBY) */
+const CUTS = { 'milla-nova': [490, 1108], 'evie-young': [900, 1182], 'rosa-clara': [848, 1138], 'adriana-alier': [412, 1014], 'pronovias': [900, 1222], 'st-patrick': [892, 1072], 'diamond-couture': [712, 1068], 'altri-brand': [900, 1262], 'nicole': [672, 1070], 'natali-styran': [638, 930], 'musani': [888, 1130], 'anna-bella': [774, 1122], 'alberto-palatchi': [726, 976], 'angelo-toma': [668, 1338], 'petrelli': [360, 1250], 'scribano': [460, 1202], 'rocchini': [486, 908] };
+const brandCount = (b) => CATALOG.filter((i) => (b.k === 'anna-bella' ? /Anna Bella/.test(i.n) : b.k === 'altri-brand' ? i.b === 'Altri brand' && !/Anna Bella/.test(i.n) : i.b === b.n)).length;
+
+function initQueue(el) {
+  const stage = $('.bq__stage', el);
+  const rail = $('.bq__rail', el);
+  const loupe = $('.bq__loupe', el);
+  const lim = $('img', loupe);
+  const list = BRANDS.map((b) => ({ ...b, cut: CUTS[b.k], count: brandCount(b) }));
+  const N = list.length;
+  $('.bq__tot', el).textContent = String(N).padStart(2, '0');
+  stage.insertAdjacentHTML('afterbegin', list.map((b, i) => (b.cut
+    ? `<figure class="bq__fig${b.k === 'scribano' ? ' is-cut' : ''}" style="--ar:${(b.cut[0] / b.cut[1]).toFixed(4)}">${[1, 2, 3].map(() => `<img class="bq__ghost" src="assets/brand/${b.k}.webp" alt="" aria-hidden="true" loading="${i < 3 ? 'eager' : 'lazy'}">`).join('')}<img class="bq__img" src="assets/brand/${b.k}.webp" alt="Abito ${esc(b.n)}" draggable="false" loading="${i < 3 ? 'eager' : 'lazy'}"></figure>`
+    : `<figure class="bq__fig bq__fig--type" style="--ar:.62"><b class="type-tile"><i aria-hidden="true">♥</i>${esc(b.n)}</b></figure>`)).join(''));
+  let html = '';
+  list.forEach((b, i) => {
+    if (i === 0 || list[i - 1].g !== b.g) html += `<li class="bq__group">${b.g === 'donna' ? 'Sposa' : 'Sposo'}</li>`;
+    html += `<li><button type="button" class="bq__tag" data-i="${i}"><span class="bq__thumb">${b.cut ? `<img src="assets/brand/${b.k}.webp" alt="" loading="lazy">` : '<i aria-hidden="true">♥</i>'}</span><span class="bq__tn">${esc(b.n)}</span><span class="bq__tc">${b.count ? `${b.count} abiti` : 'In atelier'}</span><span class="bq__hole" aria-hidden="true"></span></button></li>`;
+  });
+  rail.innerHTML = html;
+  const figs = $$('.bq__fig', stage);
+  const tags = $$('.bq__tag', rail);
+  const name = $('.bq__name span', el);
+  const st = { f: 0 };
+  let current = -1, lastF = 0, vel = 0;
+  const clampF = (i) => Math.max(0, Math.min(N - 1, i));
+  const show = (k, animate) => {
+    const b = list[k];
+    $('.bq__count b', el).textContent = String(k + 1).padStart(2, '0');
+    $('.bq__desc', el).textContent = b.d || '';
+    $('.bq__meta', el).textContent = b.count ? `${b.count} abiti da provare in atelier` : 'Chiedi in atelier i modelli disponibili';
+    $('.bq__go', el).href = `brand.html?b=${b.k}`;
+    tags.forEach((t, i) => t.classList.toggle('is-on', i === k));
+    const tag = tags[k];
+    rail.scrollTo({ top: tag.offsetTop - rail.clientHeight / 2 + tag.offsetHeight / 2, behavior: animate ? 'smooth' : 'auto' });
+    if (!animate) { name.textContent = b.n; return; }
+    gsap.to(name, { yPercent: -110, duration: 0.25, ease: 'power2.in', overwrite: true, onComplete: () => { name.textContent = b.n; gsap.fromTo(name, { yPercent: 110 }, { yPercent: 0, duration: 0.55, ease: 'expo.out' }); } });
+  };
+  const layout = () => {
+    const W = stage.clientWidth, H = stage.clientHeight, fh = H * 0.86;
+    vel = st.f - lastF;
+    lastF = st.f;
+    figs.forEach((fig, i) => {
+      const d = i - st.f;
+      let x, s, y, blur, op, br;
+      if (d >= 0) {
+        x = 0.5 + 0.2 * d - 0.022 * d * d;
+        s = Math.pow(0.62, d);
+        y = 0.96 - 0.14 * (1 - s);
+        blur = Math.min(d * 3, 10);
+        op = d > 3.2 ? Math.max(0, 1 - (d - 3.2) * 2) : 1;
+        br = 1 - Math.min(d, 4) * 0.06;
+      } else {
+        x = 0.5 + 0.7 * d;
+        s = 1 - d * 0.1;
+        y = 0.96;
+        blur = Math.min(-d * 6, 12);
+        op = Math.max(0, 1 + d * 1.3);
+        br = 1;
+      }
+      const fw = fh * parseFloat(fig.style.getPropertyValue('--ar'));
+      fig.style.width = `${fw}px`;
+      fig.style.height = `${fh}px`;
+      fig.style.transform = `translate3d(${x * W - fw / 2}px, ${y * H - fh}px, 0) scale(${s})`;
+      fig.style.filter = `blur(${blur.toFixed(2)}px) brightness(${br.toFixed(3)})`;
+      fig.style.opacity = op.toFixed(3);
+      fig.style.zIndex = String(100 - Math.round(d * 10));
+      const ghosts = fig.querySelectorAll('.bq__ghost');
+      const g = Math.abs(d) < 1.3 ? Math.min(1, Math.abs(vel) * 14) : 0;
+      ghosts.forEach((gh, j) => {
+        gh.style.opacity = (g * (0.32 / (j + 1))).toFixed(3);
+        gh.style.transform = `translateX(${(vel * W * 1.6 * (j + 1)).toFixed(1)}px)`;
+      });
+    });
+    const k = Math.round(clampF(st.f));
+    if (k !== current) { const first = current < 0; current = k; show(k, !first && !reduce); }
+  };
+  const go = (i) => {
+    const t = clampF(i);
+    if (reduce) { st.f = t; layout(); return; }
+    gsap.to(st, { f: t, duration: 0.9, ease: 'power3.inOut', overwrite: true, onUpdate: layout, onComplete: () => { lastF = st.f; layout(); } });
+  };
+  const start = list.findIndex((b) => b.k === new URLSearchParams(location.search).get('b'));
+  st.f = start > 0 ? start : 0;
+  lastF = st.f;
+  layout();
+  window.addEventListener('resize', layout);
+  $$('[data-q]', el).forEach((btn) => btn.addEventListener('click', () => go(Math.round(st.f) + Number(btn.dataset.q))));
+  tags.forEach((t) => t.addEventListener('click', () => go(Number(t.dataset.i))));
+  stage.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(Math.round(st.f) + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(Math.round(st.f) - 1); }
+  });
+  let sx = null, f0 = 0, moved = false;
+  stage.addEventListener('pointerdown', (e) => { sx = e.clientX; f0 = st.f; moved = false; gsap.killTweensOf(st); stage.classList.add('is-drag'); });
+  window.addEventListener('pointermove', (e) => {
+    if (sx === null) return;
+    if (Math.abs(e.clientX - sx) > 4) moved = true;
+    st.f = clampF(f0 - (e.clientX - sx) / (stage.clientWidth * 0.4));
+    layout();
+  });
+  window.addEventListener('pointerup', () => {
+    if (sx === null) return;
+    sx = null;
+    stage.classList.remove('is-drag');
+    go(Math.round(st.f + vel * 6));
+  });
+  figs.forEach((fig, i) => fig.addEventListener('click', () => { if (!moved && i !== Math.round(st.f)) go(i); }));
+
+  const Z = 2.4, L = 170;
+  stage.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse' || sx !== null) { loupe.classList.remove('is-on'); return; }
+    const im = $('.bq__img', figs[Math.round(st.f)]);
+    if (!im) { loupe.classList.remove('is-on'); return; }
+    const r = im.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+    const inside = e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom;
+    loupe.classList.toggle('is-on', inside);
+    if (!inside) return;
+    if (lim.getAttribute('src') !== im.getAttribute('src')) lim.src = im.src;
+    lim.style.width = `${r.width * Z}px`;
+    lim.style.height = `${r.height * Z}px`;
+    lim.style.transform = `translate(${-((e.clientX - r.left) * Z - L / 2)}px, ${-((e.clientY - r.top) * Z - L / 2)}px)`;
+    loupe.style.left = `${e.clientX - sr.left - L / 2}px`;
+    loupe.style.top = `${e.clientY - sr.top - L / 2}px`;
+  });
+  stage.addEventListener('pointerleave', () => loupe.classList.remove('is-on'));
+
+  if (reduce) return;
+  gsap.from(splitTitle($('.bq__title', el)), { yPercent: 110, duration: 1.2, ease: 'expo.out', stagger: 0.06, delay: 0.3 });
+  gsap.from($$('.bq__intro > *, .bq__now > *', el), { opacity: 0, y: 20, duration: 1, ease: 'expo.out', stagger: 0.06, delay: 0.5 });
+  gsap.from($$('.bq__img, .bq__fig--type .type-tile', stage), { opacity: 0, yPercent: 5, duration: 1.4, ease: 'expo.out', stagger: 0.08, delay: 0.2 });
+  gsap.from(tags, { opacity: 0, x: 20, duration: 0.9, ease: 'expo.out', stagger: 0.03, delay: 0.6 });
+}
+
+/* Card degli abiti: ferme e visibili; la foto si colora salendo verso il centro dello schermo */
+let colorTriggers = [];
+function animateIn(els) {
+  if (reduce || !els.length) return;
+  colorTriggers = colorTriggers.filter((st) => {
+    if (st.trigger && st.trigger.isConnected) return true;
+    st.animation?.kill(); st.kill();
+    return false;
+  });
+  els.forEach((card) => {
+    const im = $('img', card);
+    if (!im) return;
+    const tw = gsap.fromTo(im, { filter: 'grayscale(1) brightness(1.07)' }, {
+      filter: 'grayscale(0) brightness(1)', ease: 'none',
+      scrollTrigger: { trigger: card, start: 'top bottom', end: 'center 60%', scrub: 0.4 },
+    });
+    colorTriggers.push(tw.scrollTrigger);
+  });
+}
+
+/* Perché sceglierci: le icone si disegnano */
+function initWhy() {
+  const items = $$('.whyl__list > li, .points > div, .services__list > li, .steps > li');
+  if (!items.length) return;
+  const draw = (li, d = 0) => gsap.fromTo($$('.ic svg > *', li), { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.4, ease: 'power2.inOut', stagger: 0.12, delay: d });
+  if (reduce) { gsap.set($$('.ic svg > *'), { strokeDashoffset: 0 }); return; }
+  ScrollTrigger.batch(items, { start: 'top 88%', once: true, onEnter: (b) => b.forEach((li, k) => draw(li, 0.2 + k * 0.15)) });
+  items.forEach((li) => li.addEventListener('pointerenter', () => draw(li)));
+}
+
+/* Titoli: le parole salgono una alla volta */
+function initWords() {
+  if (reduce) return;
+  $$('.head, .mh__title').forEach((h) => {
+    if (h.dataset.words || h.querySelector('*')) return;
+    h.dataset.words = '1';
+    h.innerHTML = h.textContent.trim().split(/\s+/).map((w) => `<span class="w"><span>${esc(w)}</span></span>`).join(' ');
+    gsap.from($$('.w > span', h), { yPercent: 110, duration: 1.1, ease: 'expo.out', stagger: 0.05, scrollTrigger: { trigger: h, start: 'top 92%', once: true } });
+  });
+}
+
+/* Foto che si aprono come una tendina */
+function initImageReveals() {
+  if (reduce) return;
+  const sel = '.story__pic, .services__pic, .who__pic, .intro__pic, .bcard__pic, .pinned__item .pic, .gal__pic, .quiz__side';
+  ScrollTrigger.batch(sel, {
+    start: 'top 92%', once: true,
+    onEnter: (els) => gsap.fromTo(els, { clipPath: 'inset(18% 0 18% 0 round 22px)', scale: 0.94 }, { clipPath: 'inset(0% 0 0% 0 round 22px)', scale: 1, duration: 1.3, ease: 'expo.out', stagger: 0.08 }),
+  });
+}
+
+/* Card con inclinazione 3D e pulsanti magnetici */
+function initTilt() {
+  if (reduce || !fine) return;
+  document.addEventListener('pointermove', (e) => {
+    const c = e.target.closest('.band a, .cflow__item.is-on');
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    gsap.to(c, { rotationY: ((e.clientX - r.left) / r.width - 0.5) * 10, rotationX: -((e.clientY - r.top) / r.height - 0.5) * 10, transformPerspective: 900, duration: 0.5, ease: 'power3' });
+  });
+  document.addEventListener('pointerout', (e) => {
+    const c = e.target.closest('.card, .bcard, .band a');
+    if (c && !c.contains(e.relatedTarget)) gsap.to(c, { rotationY: 0, rotationX: 0, duration: 0.8, ease: 'elastic.out(1, .5)' });
+  });
+  $$('.btn').forEach((b) => {
+    b.addEventListener('pointermove', (e) => { const r = b.getBoundingClientRect(); gsap.to(b, { x: (e.clientX - r.left - r.width / 2) * 0.25, y: (e.clientY - r.top - r.height / 2) * 0.35, duration: 0.4, ease: 'power3' }); });
+    b.addEventListener('pointerleave', () => gsap.to(b, { x: 0, y: 0, duration: 0.7, ease: 'elastic.out(1, .4)' }));
+  });
+}
+
+/* Nastro di parole mosso dallo scroll */
+function initBand() {
+  $$('.tband').forEach((b) => {
+    const [a, c] = $$('.tband__row', b);
+    if (reduce) return;
+    gsap.fromTo(a, { xPercent: 0 }, { xPercent: -30, ease: 'none', scrollTrigger: { trigger: b, start: 'top bottom', end: 'bottom top', scrub: true } });
+    gsap.fromTo(c, { xPercent: -30 }, { xPercent: 0, ease: 'none', scrollTrigger: { trigger: b, start: 'top bottom', end: 'bottom top', scrub: true } });
+  });
+}
+
+/* Prima e dopo da trascinare */
+function initBeforeAfter() {
+  $$('.ba').forEach((ba) => {
+    const after = $('.ba__after', ba);
+    const before = $('.ba__before img', ba);
+    const single = () => { ba.classList.add('ba--single'); if (after.dataset.fallback && !after.dataset.used) { after.dataset.used = '1'; after.src = after.dataset.fallback; } };
+    after.addEventListener('error', single);
+    before.addEventListener('error', single);
+    if ([after, before].some((im) => im.complete && !im.naturalWidth)) single();
+    const range = $('.ba__range', ba);
+    const set = (v) => { ba.style.setProperty('--pos', `${v}%`); range.value = v; };
+    range.addEventListener('input', () => set(range.value));
+    let drag = false;
+    const move = (e) => { const r = ba.getBoundingClientRect(); set(gsap.utils.clamp(0, 100, ((e.clientX - r.left) / r.width) * 100)); };
+    ba.addEventListener('pointerdown', (e) => { drag = true; move(e); });
+    window.addEventListener('pointerup', () => { drag = false; });
+    ba.addEventListener('pointermove', (e) => { if (drag || fine) move(e); });
+    if (!reduce) {
+      const o = { v: 50 };
+      gsap.timeline({ scrollTrigger: { trigger: ba, start: 'top 70%', once: true } })
+        .to(o, { v: 15, duration: 1, ease: 'power2.inOut', onUpdate: () => set(o.v) })
+        .to(o, { v: 85, duration: 1.4, ease: 'power2.inOut', onUpdate: () => set(o.v) })
+        .to(o, { v: 50, duration: 1, ease: 'power2.inOut', onUpdate: () => set(o.v) });
+    }
+  });
+}
+
+/* Brand in home: carosello 3D trascinabile */
+function initCoverflow() {
+  const stage = $('.cflow__stage');
+  if (!stage) return;
+  const list = BRANDS.filter((b) => b.g === 'donna' || b.tile);
+  stage.innerHTML = list.map((b) => `<a class="cflow__item" href="brand.html?b=${b.k}">${typeOrPic(b, 600, 800, '')}<span>${esc(b.n)}</span></a>`).join('');
+  const items = $$('.cflow__item', stage);
+  const name = $('.cflow__name');
+  let at = 2;
+  let timer = 0;
+  const render = () => {
+    items.forEach((el, k) => {
+      let d = k - at;
+      if (d > items.length / 2) d -= items.length;
+      if (d < -items.length / 2) d += items.length;
+      const a = Math.abs(d);
+      el.classList.toggle('is-on', d === 0);
+      el.tabIndex = d === 0 ? 0 : -1;
+      gsap.to(el, { x: d * Math.min(240, innerWidth * 0.2), z: -a * 180, rotationY: gsap.utils.clamp(-50, 50, -d * 38), opacity: a > 3 ? 0 : 1 - a * 0.18, zIndex: 50 - a, duration: reduce ? 0 : 0.9, ease: 'expo.out' });
+    });
+    const b = list[at];
+    name.textContent = `${b.n}, ${CATALOG.filter((i) => i.b === b.n).length || 'modelli in atelier'}${CATALOG.filter((i) => i.b === b.n).length ? ' abiti' : ''}`;
+  };
+  const go = (n) => { at = (n + items.length) % items.length; render(); clearInterval(timer); if (!reduce) timer = setInterval(() => go(at + 1), 3500); };
+  $$('[data-cf]').forEach((b) => b.addEventListener('click', () => go(at + Number(b.dataset.cf))));
+  let sx = null;
+  let moved = false;
+  stage.addEventListener('pointerdown', (e) => { sx = e.clientX; moved = false; });
+  window.addEventListener('pointerup', (e) => { if (sx === null) return; const dx = e.clientX - sx; if (Math.abs(dx) > 40) { moved = true; go(at - Math.sign(dx)); } sx = null; });
+  stage.addEventListener('click', (e) => { const it = e.target.closest('.cflow__item'); if (!it) return; if (moved || !it.classList.contains('is-on')) { e.preventDefault(); e.stopPropagation(); if (!moved) go(items.indexOf(it)); } }, true);
+  go(at);
+}
+
+/* =========================================================
+   AVVIO
+   ========================================================= */
+if (PAGE === 'home') initHome();
+if (PAGE === 'catalog') initCatalog();
+if (PAGE === 'dress') initDress();
+if (PAGE === 'brands') initBrands();
+if (PAGE === 'tryon') initTryOn();
+initReviews();
+initMarquee();
+initHero3D();
+initImageHero();
+initWords();
+initWhy();
+initImageReveals();
+initTilt();
+initBand();
+initBeforeAfter();
+initCoverflow();
+initForms();
+initEntrances();
+initParallax();
+initWordmarks();
+revealPage();
+window.addEventListener('load', () => ScrollTrigger.refresh());
+document.fonts?.ready.then(() => ScrollTrigger.refresh());

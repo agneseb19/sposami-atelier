@@ -102,7 +102,7 @@ function woolTexture() {
 function tape(ctx) {
   const { scene, camera, renderer, canvas, bg } = ctx;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = ctx.opts.low ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
   scene.fog = new THREE.Fog(bg, 11, 24);
 
   const N = 220, LEN = 15, SEG = LEN / (N - 1), W = 0.16, TH = 0.006, STEP = 1 / 120, G = -7;
@@ -150,7 +150,7 @@ function tape(ctx) {
   const key = new THREE.DirectionalLight(0xFFF4E6, 2.4);
   key.position.set(-4, 9, 5);
   key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.mapSize.set(ctx.opts.low ? 1024 : 2048, ctx.opts.low ? 1024 : 2048);
   Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 30 });
   key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
   scene.add(key, key.target);
@@ -641,8 +641,8 @@ export function mount(section, opts = {}) {
   const canvas = section.querySelector('.h3d__cv');
   const make = SCENES[section.dataset.scene];
   if (!canvas || !make) return;
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 761 ? 1.25 : 1.75));
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !opts.low, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, opts.low ? 1.25 : 1.75));
   renderer.toneMapping = THREE.NeutralToneMapping;
   const bgHex = getComputedStyle(section).getPropertyValue('--h3d-bg').trim() || '#F4F3F1';
   const bg = new THREE.Color(bgHex);

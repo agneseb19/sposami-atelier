@@ -1382,3 +1382,22 @@ body:has(.sheet:not([hidden])) .bar--over .bar__menu { background: var(--surface
 }
 @media (max-width: 760px) { .drop { min-height: 12rem; } }
 @media (max-width: 760px) { #pick-brands, #bfilter { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: calc(var(--m) * -1); margin-right: calc(var(--m) * -1); padding: 0 var(--m) .2rem; } #pick-brands::-webkit-scrollbar, #bfilter::-webkit-scrollbar { display: none; } #pick-brands .chip, #bfilter .chip { flex: none; } }
+
+/* =========================================================
+   v40: fluidità
+   ========================================================= */
+/* card: il colore arriva con una transizione, una volta sola */
+.card .card__pic img { transition: opacity .7s var(--ease), transform .9s var(--ease), filter 1.2s var(--ease); }
+.card.is-grey .card__pic img { filter: grayscale(1) brightness(1.07); }
+/* cinema: la foto si muove con transform, l'oscuramento finale è un livello con opacità */
+.cn__img { will-change: transform; }
+.cn__dim { position: absolute; inset: 0; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; }
+/* niente sfocatura dietro i pulsanti: costa a ogni fotogramma di scroll */
+.bar--over .bar__icon, .bar--over .btn--soft, .bar--over .bar__menu, .gl__btn { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.bar--over .btn--soft, .bar--over .bar__menu { background: rgba(20,20,20,.3); }
+.gl__btn { background: rgba(20,20,20,.25); }
+@media (max-width: 760px) {
+  .cn--sticky { height: 200lvh; }
+  .cn--sticky .cn__pin { position: sticky; top: 0; height: 100lvh; }
+  body:has(.cn--sticky) .bar--over { position: fixed; }
+}

@@ -10,6 +10,9 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const root = document.documentElement;
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const MOBILE = window.matchMedia('(max-width: 760px)').matches;
+// dispositivi meno potenti (telefoni, pc con pochi core o poca memoria): effetti più leggeri
+const LOW = MOBILE || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
+ScrollTrigger.config({ ignoreMobileResize: true, limitCallbacks: true });
 if (reduce) root.classList.add('reduced');
 
 const PAGE = document.body.dataset.page;
@@ -46,7 +49,7 @@ const brandByName = (n) => BRANDS.find((b) => b.n === n);
    SCROLL MORBIDO
    ========================================================= */
 let lenis = null;
-if (!reduce && window.Lenis && !MOBILE) {
+if (!reduce && window.Lenis && !LOW) {
   lenis = new window.Lenis({ lerp: 0.1 });
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add((t) => lenis.raf(t * 1000));
@@ -337,16 +340,18 @@ function initMarquee() {
 function canvasHeroFrames(section, canvas, N) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return () => {};
-  const small = window.matchMedia('(max-width: 760px), (orientation: portrait) and (max-width: 1024px)').matches;
-  const dir = small ? 'assets/hero/frames-mobile' : 'assets/hero/frames';
+  const portrait = window.matchMedia('(max-width: 760px), (orientation: portrait) and (max-width: 1024px)').matches;
+  // telefono: 70 fotogrammi leggeri (540x900), caricati una volta e tenuti tutti: niente ricarichi durante lo scroll
+  const M = MOBILE ? 70 : N;
+  const dir = MOBILE ? 'assets/hero/frames-m' : portrait ? 'assets/hero/frames-mobile' : 'assets/hero/frames';
   const src = (i) => `${dir}/frame_${String(i + 1).padStart(3, '0')}.webp`;
-  const imgs = new Array(N);
+  const imgs = new Array(M);
   let current = 0;
   let lastImage = null;
   let renderPending = false;
 
   function size() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, LOW ? 1.25 : 1.5);
     const width = Math.round(canvas.clientWidth * dpr);
     const height = Math.round(canvas.clientHeight * dpr);
     if (width === canvas.width && height === canvas.height) return;
@@ -361,7 +366,7 @@ function canvasHeroFrames(section, canvas, N) {
     requestAnimationFrame(() => {
       renderPending = false;
       let im = imgs[current];
-      for (let d = 1; !im && d < N; d++) im = imgs[current - d] || imgs[current + d];
+      for (let d = 1; !im && d < M; d++) im = imgs[current - d] || imgs[current + d];
       if (!im || im === lastImage) return;
       const cw = canvas.width, ch = canvas.height;
       const scale = Math.max(cw / im.naturalWidth, ch / im.naturalHeight);
@@ -372,60 +377,36 @@ function canvasHeroFrames(section, canvas, N) {
     });
   }
 
-  const loading = new Set();
-  const failed = new Set();
-  const indices = Array.from({ length: N }, (_, i) => i);
-  const previews = indices.filter(i => i % 20 === 0 || i === N - 1);
-  let direction = 1;
-  function fillBuffer() {
-    // Sul telefono conserva solo i fotogrammi vicini e poche anteprime per i salti lunghi.
-    const radius = MOBILE ? 6 : N;
-    const wanted = [current];
-    for (let d = 1; d <= radius; d++) {
-      wanted.push(current + direction * d, current - direction * d);
-    }
-    wanted.splice(3, 0, ...previews);
-    if (MOBILE) {
-      imgs.forEach((im, i) => {
-        if (im && Math.abs(i - current) > radius && !previews.includes(i)) imgs[i] = null;
-      });
-    }
-    for (const i of wanted) {
-      if (loading.size >= 4) break;
-      if (i < 0 || i >= N || imgs[i] || loading.has(i) || failed.has(i)) continue;
-      loading.add(i);
-      load(i);
-    }
-  }
+  // prima il primo fotogramma, poi uno ogni 8 (per i salti lunghi), poi tutti gli altri; 4 alla volta
+  const order = [0];
+  for (let i = 8; i < M; i += 8) order.push(i);
+  order.push(M - 1);
+  for (let i = 1; i < M; i++) if (!order.includes(i)) order.push(i);
+  let next = 0, active = 0;
   async function load(i) {
     const im = new Image();
     im.decoding = 'async';
     try {
-      const loaded = new Promise((resolve, reject) => {
-        im.onload = resolve;
-        im.onerror = reject;
-      });
       im.src = src(i);
-      await loaded;
-      if (im.decode) await im.decode();
+      await im.decode();
       imgs[i] = im;
-      scheduleDraw();
-    } catch {
-      failed.add(i);
-    } finally {
-      loading.delete(i);
-      fillBuffer();
+      if (!lastImage || Math.abs(i - current) < 3) scheduleDraw();
+    } catch { /* fotogramma mancante: si usa il più vicino */ }
+  }
+  function pump() {
+    while (active < 4 && next < order.length) {
+      active++;
+      load(order[next++]).finally(() => { active--; pump(); });
     }
   }
   size();
-  fillBuffer();
+  pump();
   window.addEventListener('resize', size);
 
   return (frame) => {
-    if (frame === current) return;
-    direction = Math.sign(frame - current);
-    current = frame;
-    fillBuffer();
+    const f = Math.round((frame * (M - 1)) / (N - 1));
+    if (f === current) return;
+    current = f;
     scheduleDraw();
   };
 }
@@ -842,7 +823,7 @@ function initHero3D() {
     gsap.from($$('.w > span', title), { yPercent: 110, duration: 1.2, ease: 'expo.out', stagger: 0.06, delay: 0.3 });
     gsap.from($$('.h3d__body > *', el), { opacity: 0, y: 20, duration: 1, ease: 'expo.out', stagger: 0.08, delay: 0.6 });
   }
-  import(`./hero3d.js${new URL(import.meta.url).search}`).then((m) => m.mount(el, { brands: BRANDS })).catch((err) => console.warn('Hero 3D non disponibile', err));
+  import(`./hero3d.js${new URL(import.meta.url).search}`).then((m) => m.mount(el, { brands: BRANDS, low: LOW })).catch((err) => console.warn('Hero 3D non disponibile', err));
 }
 
 /* Hero d'immagine: "cinema" (sposa, sposo, cerimonia) e "dal dettaglio all'abito" (brand) */
@@ -861,24 +842,46 @@ function splitChars(title) {
   return $$('.ch', title);
 }
 
-/* Cinema: foto a tutto schermo; scorrendo la camera scende lungo l'abito, lentissima */
+/* Cinema: foto a tutto schermo; scorrendo la camera scende lungo l'abito, lentissima.
+   La foto si sposta con transform (la scheda grafica la muove senza ridisegnarla); su telefono resta ferma (sticky). */
 function initCinema(el) {
   const im = $('.cn__img', el);
+  const pin = $('.cn__pin', el);
   const small = window.matchMedia('(max-width: 760px)').matches;
   const from = small ? el.dataset.mfrom : el.dataset.from;
   const to = small ? el.dataset.mto : el.dataset.to;
   im.style.objectPosition = from;
   if (reduce) return;
+  if (MOBILE) el.classList.add('cn--sticky');
   const chars = splitChars($('.cn__title', el));
   gsap.timeline({ delay: 0.1 })
     .from($('.cn__media', el), { opacity: 0, scale: 1.06, duration: 2.4, ease: 'power2.out' }, 0)
     .from(chars, { opacity: 0, duration: 1.2, ease: 'power1.out', stagger: 0.07 }, 0.6)
     .from($$('.cn__copy > :not(.cn__title), .cn__hint', el), { opacity: 0, y: 10, duration: 1.2, ease: 'expo.out', stagger: 0.12 }, 1.1);
-  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: MOBILE ? 'bottom top' : 'bottom bottom', scrub: 0.8 } })
-    .fromTo(im, { objectPosition: from, scale: 1 }, { objectPosition: to, scale: 1.07, duration: 1 }, 0)
+  const dim = document.createElement('div');
+  dim.className = 'cn__dim';
+  dim.setAttribute('aria-hidden', 'true');
+  $('.cn__shade', el).after(dim);
+  const box = { W: 1, H: 1, w: 1, h: 1 };
+  const fit = () => {
+    const W = pin.clientWidth, H = pin.clientHeight;
+    const r = (im.naturalWidth || 4) / (im.naturalHeight || 5);
+    const wide = W / H > r;
+    Object.assign(box, { W, H, w: wide ? W : H * r, h: wide ? W / r : H });
+    Object.assign(im.style, { position: 'absolute', left: '0', top: '0', maxWidth: 'none', width: `${box.w}px`, height: `${box.h}px` });
+  };
+  const at = (s) => {
+    const [px, py] = s.split(' ').map((p) => parseFloat(p) / 100);
+    return { x: -(box.w - box.W) * px, y: -(box.h - box.H) * py };
+  };
+  fit();
+  if (!im.complete) im.addEventListener('load', () => { fit(); ScrollTrigger.refresh(); }, { once: true });
+  ScrollTrigger.addEventListener('refreshInit', fit);
+  gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: 'bottom bottom', scrub: MOBILE ? true : 0.8, invalidateOnRefresh: true } })
+    .fromTo(im, { x: () => at(from).x, y: () => at(from).y, scale: 1 }, { x: () => at(to).x, y: () => at(to).y, scale: 1.07, duration: 1 }, 0)
     .to($('.cn__hint', el), { opacity: 0, duration: 0.08 }, 0)
     .to($('.cn__copy', el), { opacity: 0, y: -16, duration: 0.3 }, 0.05)
-    .to($('.cn__shade', el), { '--end': 0.5, duration: 0.35 }, 0.65);
+    .to(dim, { opacity: 1, duration: 0.35 }, 0.65);
 }
 
 /* Brand: si parte dal pizzo in primissimo piano e la camera si allontana fino all'abito */
@@ -930,23 +933,17 @@ function typeOrPic(b, w, h, alt) {
     : `<b class="type-tile"><i aria-hidden="true">♥</i>${esc(b.n)}</b>`;
 }
 
-let colorTriggers = [];
+// Card in bianco e nero che si colorano entrando nello schermo: una transizione CSS, nessun calcolo durante lo scroll
+const greyIO = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+  entries.forEach((e) => {
+    if (!e.isIntersecting) return;
+    e.target.classList.remove('is-grey');
+    greyIO.unobserve(e.target);
+  });
+}, { rootMargin: '0px 0px -18% 0px' }) : null;
 function animateIn(els) {
-  if (reduce || MOBILE || !els.length) return;
-  colorTriggers = colorTriggers.filter((st) => {
-    if (st.trigger && st.trigger.isConnected) return true;
-    st.animation?.kill(); st.kill();
-    return false;
-  });
-  els.forEach((card) => {
-    const im = $('img', card);
-    if (!im) return;
-    const tw = gsap.fromTo(im, { filter: 'grayscale(1) brightness(1.07)' }, {
-      filter: 'grayscale(0) brightness(1)', ease: 'none',
-      scrollTrigger: { trigger: card, start: 'top bottom', end: 'center 60%', scrub: 0.4 },
-    });
-    colorTriggers.push(tw.scrollTrigger);
-  });
+  if (reduce || MOBILE || !greyIO || !els.length) return;
+  els.forEach((card) => { card.classList.add('is-grey'); greyIO.observe(card); });
 }
 
 /* Perché sceglierci: le icone si disegnano */

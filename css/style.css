@@ -1240,3 +1240,31 @@ body:has(.sheet:not([hidden])) .bar--over .bar__menu { background: var(--surface
 .sar-home__link:hover .alt-step__pic img { transform: scale(1.03); }
 .sar-home .alt-step__pic img { transition: transform 1.2s var(--ease); }
 .sar-home__cta { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin-top: clamp(2.5rem, 5vw, 3.5rem); }
+
+/* =========================================================
+   v37: pagina Contatti
+   ========================================================= */
+.reach { padding-left: var(--m); padding-right: var(--m); }
+.reach__tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(.8rem, 1.6vw, 1.2rem); }
+.reach__tile { display: grid; justify-items: center; gap: .45rem; padding: clamp(2rem, 4vw, 3rem) 1.4rem; border-radius: var(--r); background: var(--surface); color: var(--ink); text-align: center; text-decoration: none; transition: background-color .4s var(--ease), color .4s var(--ease), transform .6s var(--ease); }
+.reach__tile:hover { background: #141414; color: #fff; }
+.reach__ic { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: .6rem; border-radius: 50%; background: #fff; color: var(--accent); transition: background-color .4s var(--ease); }
+.reach__tile:hover .reach__ic { background: rgba(255,255,255,.1); }
+.reach__ic svg { width: 22px; height: 22px; }
+.reach__label { font-size: var(--caps); font-weight: 500; letter-spacing: var(--track); text-transform: uppercase; }
+.reach__value { font-size: var(--step-lead); font-weight: 300; overflow-wrap: anywhere; }
+.reach__sub { font-size: 13px; opacity: .65; }
+.ask-panel { padding-left: var(--m); padding-right: var(--m); }
+.tabs { width: min(40rem, 100%); margin: 0 auto; }
+.tabs__bar { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface); margin-bottom: clamp(2rem, 4vw, 3rem); }
+.tabs__bar [role="tab"] { min-height: 48px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: var(--caps); font-weight: 500; letter-spacing: var(--track); text-transform: uppercase; cursor: pointer; transition: background-color .4s var(--ease), color .4s var(--ease); }
+.tabs__bar [role="tab"][aria-selected="true"] { background: #141414; color: #fff; }
+.tabs__lead { margin: 0 0 2rem; text-align: center; color: var(--muted); }
+.ask-panel + .visit { padding-top: var(--gap); }
+@media (max-width: 760px) {
+  .reach__tiles { grid-template-columns: 1fr; }
+  .reach__tile { grid-template-columns: auto 1fr; justify-items: start; text-align: left; column-gap: 1rem; row-gap: .15rem; padding: 1.3rem 1.2rem; }
+  .reach__ic { grid-row: span 3; margin: 0; align-self: center; }
+  .tabs__bar [role="tab"] { letter-spacing: .08em; padding: 0 .4rem; }
+}
+.ask-panel { padding-top: clamp(3.5rem, 6vw, 5rem); }

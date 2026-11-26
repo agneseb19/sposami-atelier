@@ -723,6 +723,34 @@ function initForms() {
   });
 }
 
+/* Schede (pagina Contatti): una sola scheda aperta, frecce per spostarsi, #domanda apre la seconda */
+function initTabs() {
+  $$('.tabs').forEach((box) => {
+    const tabs = $$('[role="tab"]', box);
+    const show = (t, focus = false) => {
+      tabs.forEach((x) => {
+        const on = x === t;
+        x.setAttribute('aria-selected', String(on));
+        x.tabIndex = on ? 0 : -1;
+        $(`#${x.getAttribute('aria-controls')}`).hidden = !on;
+      });
+      if (focus) t.focus();
+      const panel = $(`#${t.getAttribute('aria-controls')}`);
+      if (!reduce) gsap.fromTo(panel, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.6, ease: 'expo.out' });
+      ScrollTrigger.refresh();
+    };
+    tabs.forEach((t, k) => {
+      t.addEventListener('click', () => show(t));
+      t.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        show(tabs[(k + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length], true);
+      });
+    });
+    if (location.hash === '#domanda') show(tabs[1]);
+  });
+}
+
 /* =========================================================
    MOTION v6
    ========================================================= */
@@ -1007,6 +1035,7 @@ initCollection();
 initBeforeAfter();
 initCoverflow();
 initForms();
+initTabs();
 initEntrances();
 initParallax();
 initWordmarks();

@@ -334,14 +334,9 @@ function initMarquee() {
    HERO: fotogrammi legati allo scroll
    dal mezzo busto (frame_001) all'abito intero (frame_140)
    ========================================================= */
-function initFrameHero() {
-  const section = $('.vhero');
-  if (!section) return;
-  const canvas = $('.vhero__canvas', section);
-  if (reduce || !canvas.getContext) return; // con "riduci movimento" resta l'immagine finale
+function canvasHeroFrames(section, canvas, N) {
   const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const N = 140;
+  if (!ctx) return () => {};
   const small = window.matchMedia('(max-width: 760px), (orientation: portrait) and (max-width: 1024px)').matches;
   const dir = small ? 'assets/hero/frames-mobile' : 'assets/hero/frames';
   const src = (i) => `${dir}/frame_${String(i + 1).padStart(3, '0')}.webp`;
@@ -419,16 +414,68 @@ function initFrameHero() {
   loadFrames(true);
   window.addEventListener('resize', size);
 
+  return (frame) => {
+    if (frame === current) return;
+    current = frame;
+    scheduleDraw();
+  };
+}
+
+function mobileHeroFrames(section, canvas, count) {
+  const video = document.createElement('video');
+  if (!video.canPlayType('video/webm; codecs="vp9"')) return canvasHeroFrames(section, canvas, count);
+  video.className = 'vhero__video';
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.setAttribute('aria-hidden', 'true');
+  canvas.after(video);
+
+  let frame = 0;
+  let fallback;
+  function seek() {
+    if (fallback || video.seeking || video.readyState < 2) return;
+    const time = frame / 30;
+    if (Math.abs(video.currentTime - time) > 1 / 60) video.currentTime = time;
+  }
+  video.addEventListener('loadeddata', () => {
+    section.classList.add('vhero--live');
+    seek();
+  });
+  video.addEventListener('seeked', seek);
+  video.addEventListener('canplay', seek);
+  video.addEventListener('error', () => {
+    video.remove();
+    section.classList.remove('vhero--live');
+    fallback = canvasHeroFrames(section, canvas, count);
+    fallback(frame);
+  }, { once: true });
+  video.src = 'assets/hero/scroll-mobile.webm';
+  return (next) => {
+    frame = next;
+    if (fallback) fallback(frame);
+    else seek();
+  };
+}
+
+function initFrameHero() {
+  const section = $('.vhero');
+  if (!section || reduce) return;
+  const canvas = $('.vhero__canvas', section);
+  const stage = $('.vhero__stage', section);
+  const N = 140;
+  if (MOBILE) section.classList.add('vhero--sticky');
+  const showFrame = MOBILE ? mobileHeroFrames(section, canvas, N) : canvasHeroFrames(section, canvas, N);
   const state = { f: 0 };
   const tl = gsap.timeline({
     defaults: { ease: 'none' },
     scrollTrigger: {
       trigger: section, start: 'top top',
-      end: () => window.matchMedia('(max-width: 760px)').matches ? '+=' + section.offsetHeight : '+=260%',
-      pin: true, scrub: MOBILE ? true : 1, anticipatePin: 1,
+      end: () => MOBILE ? '+=' + (section.offsetHeight - stage.offsetHeight) : '+=260%',
+      pin: !MOBILE, scrub: MOBILE ? true : 1, anticipatePin: MOBILE ? 0 : 1,
     },
   });
-  tl.to(state, { f: N - 1, duration: 1, onUpdate: () => { const i = Math.round(state.f); if (i !== current) { current = i; scheduleDraw(); } } }, 0)
+  tl.to(state, { f: N - 1, duration: 1, onUpdate: () => showFrame(Math.round(state.f)) }, 0)
     .to('.vhero__hint', { opacity: 0, duration: 0.06 }, 0)
     .to('.vhero__step--name', { opacity: 0, scale: 0.86, y: -30, duration: 0.14 }, 0.3)
     .fromTo('.vhero__claim', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.12 }, 0.42)

@@ -619,6 +619,10 @@ h1, h2, h3, .head, .sub-head, .quiz__q, .card__name, .brandrows .nm, .rv__num, .
 .vhero__still { object-fit: cover; object-position: 50% 45%; }
 .vhero--live .vhero__still { visibility: hidden; }
 .vhero__canvas { display: block; }
+.vhero--sticky { height: 280lvh; }
+.vhero--sticky .vhero__stage { position: sticky; top: 0; height: 100lvh; }
+.vhero__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; visibility: hidden; }
+.vhero--live .vhero__video { visibility: visible; }
 .vhero__shade {
   position: absolute; inset: 0; pointer-events: none;
   background:

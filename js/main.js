@@ -155,7 +155,7 @@ function initParallax(scope = document) {
 function initWordmarks() {
   if (reduce) return;
   const foot = $('.foot__name');
-  if (foot) {
+  if (foot && !MOBILE) {
     gsap.fromTo(foot, { scale: 0.92 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: '.foot', start: 'top bottom', end: 'bottom bottom', scrub: true } });
   }
 }
@@ -369,26 +369,32 @@ function canvasHeroFrames(section, canvas, N) {
       for (let d = 1; !im && d < M; d++) im = imgs[current - d] || imgs[current + d];
       if (!im || im === lastImage) return;
       const cw = canvas.width, ch = canvas.height;
-      const scale = Math.max(cw / im.naturalWidth, ch / im.naturalHeight);
-      const w = im.naturalWidth * scale, h = im.naturalHeight * scale;
+      const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      const scale = Math.max(cw / iw, ch / ih);
+      const w = iw * scale, h = ih * scale;
       ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
       lastImage = im;
       section.classList.add('vhero--live');
     });
   }
 
-  // prima il primo fotogramma, poi uno ogni 8 (per i salti lunghi), poi tutti gli altri; 4 alla volta
-  const order = [0];
-  for (let i = 8; i < M; i += 8) order.push(i);
-  order.push(M - 1);
-  for (let i = 1; i < M; i++) if (!order.includes(i)) order.push(i);
+  // in sequenza dal primo, nella stessa direzione in cui si scorre; 4 alla volta
+  const order = Array.from({ length: M }, (_, i) => i);
   let next = 0, active = 0;
+  // ImageBitmap: decodificato fuori dal thread principale e pronto per la scheda grafica, disegnarlo non costa quasi nulla
+  const bitmap = 'createImageBitmap' in window;
   async function load(i) {
-    const im = new Image();
-    im.decoding = 'async';
     try {
-      im.src = src(i);
-      await im.decode();
+      let im;
+      if (bitmap) {
+        const res = await fetch(src(i));
+        im = await createImageBitmap(await res.blob());
+      } else {
+        im = new Image();
+        im.decoding = 'async';
+        im.src = src(i);
+        await im.decode();
+      }
       imgs[i] = im;
       if (!lastImage || Math.abs(i - current) < 3) scheduleDraw();
     } catch { /* fotogramma mancante: si usa il più vicino */ }
@@ -1085,7 +1091,9 @@ function initCoverflow() {
     const b = list[at];
     name.textContent = `${b.n}, ${CATALOG.filter((i) => i.b === b.n).length || 'modelli in atelier'}${CATALOG.filter((i) => i.b === b.n).length ? ' abiti' : ''}`;
   };
-  const go = (n) => { at = (n + items.length) % items.length; render(); clearInterval(timer); if (!reduce) timer = setInterval(() => go(at + 1), 3500); };
+  let inView = false;
+  const go = (n) => { at = (n + items.length) % items.length; render(); clearInterval(timer); if (!reduce && !MOBILE && inView) timer = setInterval(() => go(at + 1), 3500); };
+  new IntersectionObserver(([e]) => { inView = e.isIntersecting; if (inView) go(at); else clearInterval(timer); }).observe(stage);
   $$('[data-cf]').forEach((b) => b.addEventListener('click', () => go(at + Number(b.dataset.cf))));
   let sx = null;
   let moved = false;

@@ -1401,3 +1401,6 @@ body:has(.sheet:not([hidden])) .bar--over .bar__menu { background: var(--surface
   .cn--sticky .cn__pin { position: sticky; top: 0; height: 100lvh; }
   body:has(.cn--sticky) .bar--over { position: fixed; }
 }
+
+/* v42: i testi della hero home si muovono su un livello proprio */
+@media (max-width: 760px) { .vhero__step, .vhero__claim, .vhero__end, .vhero__canvas { will-change: transform, opacity; } }

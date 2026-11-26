@@ -434,10 +434,13 @@ function cardHTML(it) {
   </a>`;
 }
 
+/* Gli abiti outlet hanno la taglia nel nome (es. "TG 48 ITA") */
+const isOutlet = (i) => /TG\s*\d/i.test(i.n);
+
 function initCatalog() {
   const cat = document.body.dataset.cat;
   const grid = $('#grid');
-  const items = CATALOG.filter((i) => i.c === cat);
+  const items = cat === 'outlet' ? CATALOG.filter(isOutlet) : CATALOG.filter((i) => i.c === cat);
   const params = new URLSearchParams(location.search);
   const state = { style: new Set(), brand: '', sort: 'new', shown: 24, det: null, q: '' };
   if (params.get('stile')) state.style.add(params.get('stile'));
@@ -515,60 +518,73 @@ function initDress() {
   }
 }
 
-/* Galleria dell'abito: una foto alla volta. La nuova entra con un taglio che scorre
-   e un leggero rientro dell'immagine, la vecchia arretra (parallasse). Trascina, frecce o miniature. */
+/* Galleria dell'abito: le foto intere in fila, si scorrono col dito, col trackpad o trascinando col mouse */
+const imgFit = (id, w, h) => id.startsWith('assets/') ? id : `${MEDIA}${id}/v1/fit/w_${w},h_${h},q_85,enc_auto/${id.split('~')[0].split('.')[0]}.jpg`;
 function initGallery(box, it) {
   const pics = it.img;
   const n = pics.length;
   const pad = (k) => String(k).padStart(2, '0');
-  box.innerHTML = `<div class="gl" tabindex="0" aria-roledescription="carosello" aria-label="Foto di ${esc(it.n)}">
-    <div class="gl__stage">${pics.map((src, k) => `<figure class="gl__slide${k ? '' : ' is-on'}" aria-hidden="${k ? 'true' : 'false'}"><img src="${img(src, 1200, 1500)}" alt="${esc(`${it.n}, ${it.b}, foto ${k + 1} di ${n}`)}"${k ? ' loading="lazy"' : ''} draggable="false"></figure>`).join('')}
-      ${n > 1 ? `<div class="gl__ui"><p class="gl__count" aria-live="polite"><b>01</b> / ${pad(n)}</p><div class="gl__nav"><button type="button" class="gl__btn" data-d="-1" aria-label="Foto precedente"><svg viewBox="0 0 14 10" aria-hidden="true"><path d="M14 5H2M5.5 1 1.5 5l4 4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button><button type="button" class="gl__btn" data-d="1" aria-label="Foto successiva"><svg viewBox="0 0 14 10" aria-hidden="true"><path d="M0 5h12M8.5 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button></div></div><div class="gl__bar" aria-hidden="true"><i></i></div>` : ''}
-    </div>
-    ${n > 1 ? `<div class="gl__thumbs">${pics.map((src, k) => `<button type="button" class="gl__thumb${k ? '' : ' is-on'}" data-k="${k}" aria-label="Mostra foto ${k + 1}"><img src="${img(src, 160, 200)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
+  box.innerHTML = `<div class="gl${n > 1 ? '' : ' gl--one'}" aria-roledescription="galleria" aria-label="Foto di ${esc(it.n)}">
+    <div class="gl__track" tabindex="0" data-lenis-prevent>${pics.map((src, k) => `<figure class="gl__slide"><img src="${imgFit(src, 1400, 1750)}" alt="${esc(`${it.n}, ${it.b}, foto ${k + 1} di ${n}`)}"${k > 1 ? ' loading="lazy"' : ''} draggable="false"></figure>`).join('')}</div>
+    ${n > 1 ? `<div class="gl__ui"><p class="gl__count" aria-live="polite"><b>01</b> / ${pad(n)}</p><div class="gl__bar" aria-hidden="true"><i></i></div><div class="gl__nav"><button type="button" class="gl__btn" data-d="-1" aria-label="Foto precedente"><svg viewBox="0 0 14 10" aria-hidden="true"><path d="M14 5H2M5.5 1 1.5 5l4 4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button><button type="button" class="gl__btn" data-d="1" aria-label="Foto successiva"><svg viewBox="0 0 14 10" aria-hidden="true"><path d="M0 5h12M8.5 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button></div></div>` : ''}
   </div>`;
-  if (!reduce) gsap.from($('.gl__stage', box), { opacity: 0, y: 30, duration: 1.2, ease: 'expo.out', delay: 0.2 });
+  const track = $('.gl__track', box);
+  const slides = $$('.gl__slide', box);
+  if (!reduce) gsap.from(slides, { opacity: 0, x: 60, duration: 1.4, ease: 'expo.out', stagger: 0.08, delay: 0.2 });
   if (n < 2) return;
-  const slides = $$('.gl__slide', box), thumbs = $$('.gl__thumb', box);
   const count = $('.gl__count b', box), bar = $('.gl__bar i', box);
-  let cur = 0, busy = false;
-  gsap.set(bar, { scaleX: 1 / n });
-  const go = (to, dir = to > cur ? 1 : -1) => {
-    to = (to + n) % n;
-    if (to === cur || busy) return;
-    const a = slides[cur], b = slides[to];
-    slides.forEach((s, k) => { s.classList.toggle('is-on', k === to); s.setAttribute('aria-hidden', String(k !== to)); });
-    thumbs.forEach((t, k) => t.classList.toggle('is-on', k === to));
-    count.textContent = pad(to + 1);
-    gsap.to(bar, { scaleX: (to + 1) / n, duration: 0.9, ease: 'expo.inOut' });
-    cur = to;
-    if (reduce) return;
-    busy = true;
-    gsap.set(b, { zIndex: 2 }); gsap.set(a, { zIndex: 1 });
-    gsap.timeline({ defaults: { duration: 1.15, ease: 'expo.inOut' }, onComplete: () => { busy = false; gsap.set([a, $('img', a)], { clearProps: 'all' }); gsap.set(b, { zIndex: 1 }); } })
-      .fromTo(b, { clipPath: dir > 0 ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0%)' }, 0)
-      .fromTo($('img', b), { scale: 1.18, xPercent: 14 * dir }, { scale: 1, xPercent: 0 }, 0)
-      .to($('img', a), { xPercent: -22 * dir, scale: 1.04 }, 0);
+  const nearest = () => {
+    const x = track.scrollLeft;
+    let best = 0;
+    slides.forEach((s, k) => { if (Math.abs(s.offsetLeft - track.offsetLeft - x) < Math.abs(slides[best].offsetLeft - track.offsetLeft - x)) best = k; });
+    return best;
   };
+  const to = (k) => {
+    k = Math.max(0, Math.min(n - 1, k));
+    track.scrollTo({ left: slides[k].offsetLeft - track.offsetLeft, behavior: reduce ? 'auto' : 'smooth' });
+  };
+  const sync = () => {
+    const max = track.scrollWidth - track.clientWidth;
+    const k = track.scrollLeft >= max - 2 ? n - 1 : nearest();
+    count.textContent = pad(k + 1);
+    bar.style.transform = `scaleX(${max > 0 ? Math.max(0.06, track.scrollLeft / max) : 1})`;
+  };
+  track.addEventListener('scroll', sync, { passive: true });
+  sync();
   box.addEventListener('click', (e) => {
     const btn = e.target.closest('.gl__btn');
-    if (btn) go(cur + +btn.dataset.d, +btn.dataset.d);
-    const th = e.target.closest('.gl__thumb');
-    if (th) go(+th.dataset.k);
+    if (btn) to(nearest() + +btn.dataset.d);
   });
-  $('.gl', box).addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1, 1); }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1, -1); }
+  track.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); to(nearest() + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); to(nearest() - 1); }
   });
-  const stage = $('.gl__stage', box);
-  let x0 = null;
-  stage.addEventListener('pointerdown', (e) => { if (!e.target.closest('.gl__btn')) x0 = e.clientX; });
-  stage.addEventListener('pointerup', (e) => {
-    if (x0 === null) return;
-    const dx = e.clientX - x0; x0 = null;
-    if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+  // trascinamento col mouse, con inerzia e aggancio alla foto più vicina
+  let drag = null;
+  track.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    drag = { x: e.clientX, left: track.scrollLeft, v: 0, t: performance.now(), moved: false };
+    track.classList.add('is-drag');
   });
-  stage.addEventListener('pointercancel', () => { x0 = null; });
+  window.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const now = performance.now(), dx = e.clientX - drag.x;
+    const nextLeft = drag.left - dx;
+    drag.v = (track.scrollLeft - nextLeft) / Math.max(now - drag.t, 1);
+    drag.t = now;
+    if (Math.abs(dx) > 4) drag.moved = true;
+    track.scrollLeft = nextLeft;
+  });
+  window.addEventListener('pointerup', () => {
+    if (!drag) return;
+    const fling = drag.v * 260;
+    track.classList.remove('is-drag');
+    const target = track.scrollLeft - fling;
+    let k = 0;
+    slides.forEach((s, i) => { if (Math.abs(s.offsetLeft - track.offsetLeft - target) < Math.abs(slides[k].offsetLeft - track.offsetLeft - target)) k = i; });
+    to(k);
+    drag = null;
+  });
 }
 
 /* =========================================================
@@ -866,6 +882,24 @@ function initBand() {
   });
 }
 
+/* Home, "Collezione 2027": le foto si scoprono dal basso, una dopo l'altra */
+function initCollection() {
+  const band = $('.band');
+  if (!band) return;
+  const cards = $$('a', band);
+  cards.forEach((a) => { a.dataset.inDone = '1'; });
+  if (reduce) { gsap.set(cards, { opacity: 1, y: 0 }); return; }
+  gsap.set(cards, { opacity: 1, y: 0, clipPath: 'inset(100% 0 0 0)' });
+  gsap.set(cards.map((a) => $('img', a)), { yPercent: 10 });
+  ScrollTrigger.create({
+    trigger: band, start: 'top 78%', once: true,
+    onEnter: () => {
+      gsap.to(cards, { clipPath: 'inset(0% 0 0 0)', duration: 1.5, ease: 'expo.inOut', stagger: 0.12 });
+      gsap.to(cards.map((a) => $('img', a)), { yPercent: 0, duration: 1.8, ease: 'expo.out', stagger: 0.12, delay: 0.15 });
+    },
+  });
+}
+
 /* Prima e dopo da trascinare */
 function initBeforeAfter() {
   $$('.ba').forEach((ba) => {
@@ -944,6 +978,7 @@ initWhy();
 initImageReveals();
 initTilt();
 initBand();
+initCollection();
 initBeforeAfter();
 initCoverflow();
 initForms();

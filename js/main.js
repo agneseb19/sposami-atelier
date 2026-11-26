@@ -341,14 +341,50 @@ function canvasHeroFrames(section, canvas, N) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return () => {};
   const portrait = window.matchMedia('(max-width: 760px), (orientation: portrait) and (max-width: 1024px)').matches;
-  // telefono: 70 fotogrammi leggeri (540x900), caricati una volta e tenuti tutti: niente ricarichi durante lo scroll
+  // telefono: 70 fotogrammi leggeri (540x900), caricati una volta e tenuti tutti
   const M = MOBILE ? 70 : N;
   const dir = MOBILE ? 'assets/hero/frames-m' : portrait ? 'assets/hero/frames-mobile' : 'assets/hero/frames';
   const src = (i) => `${dir}/frame_${String(i + 1).padStart(3, '0')}.webp`;
   const imgs = new Array(M);
-  let current = 0;
-  let lastImage = null;
-  let renderPending = false;
+  let target = 0;      // fotogramma chiesto dallo scroll (con decimali)
+  let shown = -1;      // fotogramma disegnato (con decimali)
+  let raf = 0;
+
+  const nearest = (i) => {
+    i = Math.max(0, Math.min(M - 1, i));
+    for (let d = 0; d < M; d++) {
+      if (imgs[i - d]) return imgs[i - d];
+      if (imgs[i + d]) return imgs[i + d];
+    }
+    return null;
+  };
+  const paint = (im, alpha) => {
+    const cw = canvas.width, ch = canvas.height;
+    const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+    const k = Math.max(cw / iw, ch / ih), w = iw * k, h = ih * k;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
+  };
+  // due fotogrammi vicini in dissolvenza: il movimento è continuo come in un video
+  const draw = (f) => {
+    const i = Math.floor(f), t = f - i;
+    const a = nearest(i), b = nearest(i + 1);
+    if (!a) return false;
+    paint(a, 1);
+    if (b && b !== a && t > 0.01) paint(b, t);
+    ctx.globalAlpha = 1;
+    section.classList.add('vhero--live');
+    return true;
+  };
+  // l'immagine insegue lo scroll con un leggero smorzamento
+  const tick = () => {
+    raf = 0;
+    const diff = target - shown;
+    shown = Math.abs(diff) < 0.003 || shown < 0 ? target : shown + diff * (MOBILE ? 0.22 : 0.3);
+    if (!draw(shown)) shown = -1;
+    if (shown !== target) raf = requestAnimationFrame(tick);
+  };
+  const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
 
   function size() {
     const dpr = Math.min(window.devicePixelRatio || 1, LOW ? 1.25 : 1.5);
@@ -357,33 +393,13 @@ function canvasHeroFrames(section, canvas, N) {
     if (width === canvas.width && height === canvas.height) return;
     canvas.width = width;
     canvas.height = height;
-    lastImage = null;
-    scheduleDraw();
-  }
-  function scheduleDraw() {
-    if (renderPending) return;
-    renderPending = true;
-    requestAnimationFrame(() => {
-      renderPending = false;
-      let im = imgs[current];
-      for (let d = 1; !im && d < M; d++) im = imgs[current - d] || imgs[current + d];
-      if (!im || im === lastImage) return;
-      const cw = canvas.width, ch = canvas.height;
-      const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
-      const scale = Math.max(cw / iw, ch / ih);
-      const w = iw * scale, h = ih * scale;
-      ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
-      lastImage = im;
-      section.classList.add('vhero--live');
-    });
+    shown = -1;
+    kick();
   }
 
   // in sequenza dal primo, nella stessa direzione in cui si scorre; 4 alla volta
-  const order = Array.from({ length: M }, (_, i) => i);
   let next = 0, active = 0;
-  let allLoaded;
-  const ready = new Promise((r) => { allLoaded = r; });
-  // ImageBitmap: decodificato fuori dal thread principale e pronto per la scheda grafica, disegnarlo non costa quasi nulla
+  // ImageBitmap: decodificato fuori dal thread principale e pronto per la scheda grafica
   const bitmap = 'createImageBitmap' in window;
   async function load(i) {
     try {
@@ -398,27 +414,23 @@ function canvasHeroFrames(section, canvas, N) {
         await im.decode();
       }
       imgs[i] = im;
-      if (!lastImage || Math.abs(i - current) < 3) scheduleDraw();
+      if (shown < 0 || Math.abs(i - target) < 2) { shown = -1; kick(); }
     } catch { /* fotogramma mancante: si usa il più vicino */ }
   }
   function pump() {
-    while (active < 4 && next < order.length) {
+    while (active < 4 && next < M) {
       active++;
-      load(order[next++]).finally(() => { active--; if (next >= order.length && !active) allLoaded(); pump(); });
+      load(next++).finally(() => { active--; pump(); });
     }
   }
   size();
   pump();
   window.addEventListener('resize', size);
 
-  const show = (frame) => {
-    const f = Math.round((frame * (M - 1)) / (N - 1));
-    if (f === current) return;
-    current = f;
-    scheduleDraw();
+  return (frame) => {
+    target = (frame * (M - 1)) / (N - 1);
+    kick();
   };
-  show.ready = ready;
-  return show;
 }
 
 function initFrameHero() {
@@ -427,21 +439,10 @@ function initFrameHero() {
   const canvas = $('.vhero__canvas', section);
   const stage = $('.vhero__stage', section);
   const N = 140;
+  // telefono: la hero resta ferma mentre si scorre (sticky nativo, nessun pin in JavaScript)
+  if (MOBILE) section.classList.add('vhero--sticky');
   const showFrame = canvasHeroFrames(section, canvas, N);
   const state = { f: 0 };
-  if (MOBILE) {
-    // telefono: la hero è un video che parte da solo; la pagina scorre con lo scroll nativo, senza scatti
-    const tl = gsap.timeline({ paused: true })
-      .to(state, { f: N - 1, duration: 4.4, ease: 'power1.inOut', onUpdate: () => showFrame(Math.round(state.f)) }, 0)
-      .to('.vhero__step--name', { opacity: 0, y: -20, duration: 0.6, ease: 'power2.in' }, 1.5)
-      .fromTo('.vhero__claim', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out' }, 2.1)
-      .to('.vhero__claim', { opacity: 0, y: -16, duration: 0.6, ease: 'power2.in' }, 3.6)
-      .fromTo('.vhero__end', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out' }, 4.2);
-    gsap.set(['.vhero__claim', '.vhero__end'], { opacity: 0 });
-    gsap.from('.vhero__step--name > *', { opacity: 0, y: 24, duration: 0.8, ease: 'expo.out', stagger: 0.1, delay: 0.1 });
-    Promise.race([showFrame.ready, new Promise((r) => setTimeout(r, 2500))]).then(() => gsap.delayedCall(0.8, () => tl.play()));
-    return;
-  }
   const tl = gsap.timeline({
     defaults: { ease: 'none' },
     scrollTrigger: {
@@ -450,7 +451,7 @@ function initFrameHero() {
       pin: !MOBILE, scrub: MOBILE ? true : 1, anticipatePin: MOBILE ? 0 : 1,
     },
   });
-  tl.to(state, { f: N - 1, duration: 1, onUpdate: () => showFrame(Math.round(state.f)) }, 0)
+  tl.to(state, { f: N - 1, duration: 1, onUpdate: () => showFrame(state.f) }, 0)
     .to('.vhero__hint', { opacity: 0, duration: 0.06 }, 0)
     .to('.vhero__step--name', { opacity: 0, scale: 0.86, y: -30, duration: 0.14 }, 0.3)
     .fromTo('.vhero__claim', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.12 }, 0.42)

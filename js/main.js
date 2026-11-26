@@ -848,7 +848,7 @@ function animateIn(els) {
 
 /* Perché sceglierci: le icone si disegnano */
 function initWhy() {
-  const items = $$('.whyl__list > li, .points > div, .services__list > li, .steps > li');
+  const items = $$('.whyl__list > li, .points > div, .services__list > li, .steps > li, .sar-cols > li');
   if (!items.length) return;
   const draw = (li, d = 0) => gsap.fromTo($$('.ic svg > *', li), { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.4, ease: 'power2.inOut', stagger: 0.12, delay: d });
   if (reduce) { gsap.set($$('.ic svg > *'), { strokeDashoffset: 0 }); return; }

@@ -340,63 +340,84 @@ function initFrameHero() {
   const canvas = $('.vhero__canvas', section);
   if (reduce || !canvas.getContext) return; // con "riduci movimento" resta l'immagine finale
   const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   const N = 140;
   const small = window.matchMedia('(max-width: 760px), (orientation: portrait) and (max-width: 1024px)').matches;
   const dir = small ? 'assets/hero/frames-mobile' : 'assets/hero/frames';
   const src = (i) => `${dir}/frame_${String(i + 1).padStart(3, '0')}.webp`;
   const imgs = new Array(N);
   let current = 0;
-  let ready = false;
+  let lastImage = null;
+  let renderPending = false;
 
   function size() {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    canvas.width = Math.round(canvas.clientWidth * dpr);
-    canvas.height = Math.round(canvas.clientHeight * dpr);
-    draw(current);
+    const width = Math.round(canvas.clientWidth * dpr);
+    const height = Math.round(canvas.clientHeight * dpr);
+    if (width === canvas.width && height === canvas.height) return;
+    canvas.width = width;
+    canvas.height = height;
+    lastImage = null;
+    scheduleDraw();
   }
-  // il fotogramma più vicino già caricato, per non mostrare mai il vuoto
-  function nearest(i) {
-    for (let d = 0; d < N; d++) {
-      if (imgs[i - d] && imgs[i - d].complete && imgs[i - d].naturalWidth) return imgs[i - d];
-      if (imgs[i + d] && imgs[i + d].complete && imgs[i + d].naturalWidth) return imgs[i + d];
-    }
-    return null;
-  }
-  function draw(i) {
-    const im = nearest(i);
-    if (!im) return;
-    const cw = canvas.width, ch = canvas.height;
-    const sc = Math.max(cw / im.naturalWidth, ch / im.naturalHeight); // come object-fit: cover
-    const w = im.naturalWidth * sc, h = im.naturalHeight * sc;
-    ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
-  }
-  function load(i) {
-    return new Promise((res) => {
-      const im = new Image();
-      im.decoding = 'async';
-      im.onload = im.onerror = () => res(im);
-      im.src = src(i);
-      imgs[i] = im;
+  function scheduleDraw() {
+    if (renderPending) return;
+    renderPending = true;
+    requestAnimationFrame(() => {
+      renderPending = false;
+      let im = imgs[current];
+      for (let d = 1; !im && d < N; d++) im = imgs[current - d] || imgs[current + d];
+      if (!im || im === lastImage) return;
+      const cw = canvas.width, ch = canvas.height;
+      const scale = Math.max(cw / im.naturalWidth, ch / im.naturalHeight);
+      const w = im.naturalWidth * scale, h = im.naturalHeight * scale;
+      ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
+      lastImage = im;
+      section.classList.add('vhero--live');
     });
   }
-  // prima il primo fotogramma, poi uno ogni 10, poi tutti gli altri
-  const order = [];
-  for (let i = 10; i < N; i += 10) order.push(i);
-  order.push(N - 1);
-  for (let i = 1; i < N; i++) if (!order.includes(i)) order.push(i);
-  load(0).then(() => {
-    ready = true;
-    section.classList.add('vhero--live');
-    size();
-    let k = 0;
-    const next = () => {
-      if (k >= order.length) return;
-      const i = order[k++];
-      load(i).then(() => { if (Math.abs(i - current) < 6) draw(current); next(); });
-    };
-    for (let c = 0; c < 6; c++) next();
-  });
-  window.addEventListener('resize', () => ready && size());
+
+  const pending = new Set(Array.from({ length: N }, (_, i) => i));
+  // Un caricamento prepara le anteprime distanti per gli swipe veloci.
+  // Gli altri seguono la posizione del dito, partendo dai fotogrammi consecutivi.
+  async function loadFrames(previews) {
+    while (pending.size) {
+      let index;
+      if (previews) {
+        for (const i of pending) {
+          if (i % 10 === 0 || i === N - 1) { index = i; break; }
+        }
+      }
+      if (index === undefined) {
+        for (let d = 0; index === undefined; d++) {
+          if (pending.has(current + d)) index = current + d;
+          else if (pending.has(current - d)) index = current - d;
+        }
+      }
+      pending.delete(index);
+      const im = new Image();
+      im.decoding = 'async';
+      try {
+        const loaded = new Promise((resolve, reject) => {
+          im.onload = resolve;
+          im.onerror = reject;
+        });
+        im.src = src(index);
+        await loaded;
+        if (im.decode) await im.decode();
+        imgs[index] = im;
+        scheduleDraw();
+      } catch {
+        // Il poster o il fotogramma disponibile più vicino rimane visibile.
+      }
+    }
+  }
+  size();
+  loadFrames(false);
+  loadFrames(false);
+  loadFrames(false);
+  loadFrames(true);
+  window.addEventListener('resize', size);
 
   const state = { f: 0 };
   const tl = gsap.timeline({
@@ -407,7 +428,7 @@ function initFrameHero() {
       pin: true, scrub: MOBILE ? true : 1, anticipatePin: 1,
     },
   });
-  tl.to(state, { f: N - 1, duration: 1, onUpdate: () => { const i = Math.round(state.f); if (i !== current) { current = i; draw(i); } } }, 0)
+  tl.to(state, { f: N - 1, duration: 1, onUpdate: () => { const i = Math.round(state.f); if (i !== current) { current = i; scheduleDraw(); } } }, 0)
     .to('.vhero__hint', { opacity: 0, duration: 0.06 }, 0)
     .to('.vhero__step--name', { opacity: 0, scale: 0.86, y: -30, duration: 0.14 }, 0.3)
     .fromTo('.vhero__claim', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.12 }, 0.42)
@@ -858,11 +879,11 @@ function initZoom(el) {
   if (reduce) return;
   el.classList.add('bz--animated');
   const stage = $('.bz__pin', el);
-  gsap.from(im, { opacity: 0, duration: 2, ease: 'power2.out' });
+  if (!MOBILE) gsap.from(im, { opacity: 0, duration: 2, ease: 'power2.out' });
   gsap.from($$('.bz__open, .cn__hint', el), { opacity: 0, y: 10, duration: 1.4, ease: 'expo.out', stagger: 0.2, delay: 0.6 });
   gsap.set($('.bz__copy', el), { opacity: 0, y: 16 });
   gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: el, start: 'top top', end: () => '+=' + (el.offsetHeight - stage.offsetHeight), scrub: MOBILE ? true : 0.8 } })
-    .fromTo(im, { scale: S }, { scale: 1, duration: 0.8, ease: 'power2.inOut' }, 0)
+    .fromTo(im, { scale: S }, { scale: 1, duration: 0.8, ease: MOBILE ? 'none' : 'power2.inOut' }, 0)
     .to($$('.bz__open, .cn__hint', el), { opacity: 0, duration: 0.12 }, 0.04)
     .to($('.bz__shade', el), { opacity: 1, duration: 0.25 }, 0.6)
     .to($('.bz__copy', el), { opacity: 1, y: 0, duration: 0.2 }, 0.7);

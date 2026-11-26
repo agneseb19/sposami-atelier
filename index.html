@@ -43,7 +43,11 @@
 <main id="main">
 <section class="vhero" aria-labelledby="hero-name">
   <div class="vhero__stage">
-    <img class="vhero__still" src="assets/hero/hero-fine.jpg" alt="Sposa di schiena in abito da sposa in pizzo con ampia gonna, davanti a una finestra aperta" width="2400" height="1340">
+    <picture>
+      <source media="(prefers-reduced-motion: no-preference) and (max-width: 760px), (prefers-reduced-motion: no-preference) and (orientation: portrait) and (max-width: 1024px)" srcset="assets/hero/frames-mobile/frame_001.webp">
+      <source media="(prefers-reduced-motion: no-preference)" srcset="assets/hero/frames/frame_001.webp">
+      <img fetchpriority="high" class="vhero__still" src="assets/hero/hero-fine.jpg" alt="Sposa di schiena in abito da sposa in pizzo con ampia gonna, davanti a una finestra aperta" width="2400" height="1340">
+    </picture>
     <canvas class="vhero__canvas" aria-hidden="true"></canvas>
     <div class="vhero__shade" aria-hidden="true"></div>
     <div class="vhero__copy">
@@ -265,6 +269,6 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js" defer></script>
 <script src="js/catalog.js?v=2611261159" defer></script>
-<script type="module" src="js/main.js?v=261126-hero2"></script>
+<script type="module" src="js/main.js?v=261126-hero3"></script>
 </body>
 </html>
